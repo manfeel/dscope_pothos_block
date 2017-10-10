@@ -88,8 +88,7 @@
  * |setter setReportMode(reportMode)
  * |setter setBackoffTime(backoffTime)
  **********************************************************************/
-class AudioSource : public Pothos::Block
-{
+class DscopeSource : public Pothos::Block {
 protected:
     bool _interleaved;
     bool _sendLabel;
@@ -99,36 +98,32 @@ protected:
     std::chrono::high_resolution_clock::time_point _readyTime;
 
 public:
-    AudioSource(const Pothos::DType &dtype, const size_t numChans, const std::string &chanMode)
-    {
+    DscopeSource(const Pothos::DType &dtype, const size_t numChans, const std::string &chanMode) {
         //setup ports
-	bool _interleaved = false;
+        bool _interleaved = false;
         if (_interleaved) this->setupOutput(0, Pothos::DType::fromDType(dtype, numChans));
         else for (size_t i = 0; i < numChans; i++) this->setupOutput(i, dtype);
     }
 
-    static Block *make(const Pothos::DType &dtype, const size_t numChans, const std::string &chanMode)
-    {
-	struct sr_context *sr_ctx = NULL;
+    static Block *make(const Pothos::DType &dtype, const size_t numChans, const std::string &chanMode) {
+        struct sr_context *sr_ctx = NULL;
 
-	sr_log_loglevel_set(SR_LOG_SPEW);
+        sr_log_loglevel_set(SR_LOG_SPEW);
 
-	// Initialise libsigrok
-	if (sr_init(&sr_ctx) != SR_OK) {
-		printf("ERROR: libsigrok init failed.");
-	}
-        return new AudioSource(dtype, numChans, chanMode);
+        // Initialise libsigrok
+        if (sr_init(&sr_ctx) != SR_OK) {
+            printf("ERROR: libsigrok init failed.");
+        }
+        return new DscopeSource(dtype, numChans, chanMode);
     }
 
-    void work(void)
-    {
+    void work(void) {
         if (this->workInfo().minOutElements == 0) return;
 
         //calculate the number of frames
         int numFrames = 1024; //Pa_GetStreamReadAvailable(_stream);
-        if (numFrames < 0)
-        {
-            ;//throw Pothos::Exception("AudioSource::work()", "Pa_GetStreamReadAvailable: " + std::string(Pa_GetErrorText(numFrames)));
+        if (numFrames <
+            0) { ;//throw Pothos::Exception("DscopeSource::work()", "Pa_GetStreamReadAvailable: " + std::string(Pa_GetErrorText(numFrames)));
         }
         if (numFrames == 0) numFrames = MIN_FRAMES_BLOCKING;
         numFrames = std::min<int>(numFrames, this->workInfo().minOutElements);
@@ -136,27 +131,26 @@ public:
         //get the buffer
         void *buffer = nullptr;
         if (_interleaved) buffer = this->workInfo().outputPointers[0];
-        else buffer = (void *)this->workInfo().outputPointers.data();
+        else buffer = (void *) this->workInfo().outputPointers.data();
 
         //peform read from the device
-	/*
-        PaError err = Pa_ReadStream(_stream, buffer, numFrames);
+        /*
+            PaError err = Pa_ReadStream(_stream, buffer, numFrames);
 
-        //handle the error reporting
-        bool logError = err != paNoError;
-        if (err == paInputOverflowed)
-        {
-            _readyTime += _backoffTime;
-            if (_reportStderror) std::cerr << "aO" << std::flush;
-            logError = _reportLogger;
-        }
-        if (logError)
-        {
-            poco_error(_logger, "Pa_ReadStream: " + std::string(Pa_GetErrorText(err)));
-        }
-	*/
-        if (_sendLabel)
-        {
+            //handle the error reporting
+            bool logError = err != paNoError;
+            if (err == paInputOverflowed)
+            {
+                _readyTime += _backoffTime;
+                if (_reportStderror) std::cerr << "aO" << std::flush;
+                logError = _reportLogger;
+            }
+            if (logError)
+            {
+                poco_error(_logger, "Pa_ReadStream: " + std::string(Pa_GetErrorText(err)));
+            }
+        */
+        if (_sendLabel) {
             _sendLabel = false;
             const auto rate = 1024;//Pa_GetStreamInfo(_stream)->sampleRate;
             Pothos::Label label("rxRate", rate, 0);
@@ -171,4 +165,4 @@ public:
     }
 };
 
-static Pothos::BlockRegistry registerDscope("/dsl/dscope", &AudioSource::make);
+static Pothos::BlockRegistry registerDscope("/dsl/dscope", &DscopeSource::make);

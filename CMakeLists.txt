@@ -71,7 +71,11 @@ add_definitions(-DMIN_FRAMES_BLOCKING=1024)
 POTHOS_MODULE_UTIL(
     TARGET DscopeSupport
     SOURCES
-        AudioSource.cpp
+        DscopeSource.cpp
+        devicemanager.cpp
+        sigsession.cpp
+        device.cpp
+        devinst.cpp
     LIBRARIES ${PKGDEPS_LIBRARIES}
     DESTINATION dscope
     ENABLE_DOCS
