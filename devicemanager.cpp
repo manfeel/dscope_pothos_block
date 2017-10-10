@@ -96,11 +96,11 @@ namespace pv {
         //release_driver(driver);
 
         // Check If DSL hardware driver
-        if (strncmp(driver->name, "virtual", 7)) {
-            QDir dir(DS_RES_PATH);
-            if (!dir.exists())
-                return driver_devices;
-        }
+        //if (strncmp(driver->name, "virtual", 7)) {
+        //    QDir dir(DS_RES_PATH);
+        //    if (!dir.exists())
+        //        return driver_devices;
+        //}
 
         // Do the scan
         GSList *const devices = sr_driver_scan(driver, drvopts);

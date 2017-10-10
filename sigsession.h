@@ -76,9 +76,8 @@ class Decoder;
 class DecoderFactory;
 }
 
-class SigSession : public QObject
+class SigSession
 {
-        Q_OBJECT
 
 private:
     static constexpr float Oversampling = 2.0f;
@@ -121,11 +120,7 @@ public:
 	/**
 	 * Sets device instance that will be used in the next capture session.
 	 */
-    void set_device(boost::shared_ptr<device::DevInst> dev_inst)
-        throw(QString);
-
-    void set_file(QString name)
-        throw(QString);
+    void set_device(boost::shared_ptr<device::DevInst> dev_inst);
 
     void set_default_device();
 
@@ -138,63 +133,15 @@ public:
     double cur_sampletime() const;
     void set_cur_samplerate(uint64_t samplerate);
     void set_cur_samplelimits(uint64_t samplelimits);
-    QDateTime get_trigger_time() const;
-    uint64_t get_trigger_pos() const;
 
     void start_capture(bool instant);
+	void stop_capture();
     void capture_init();
     bool get_capture_status(bool &triggered, int &progress);
-    void logic_init();
-
-    std::set< boost::shared_ptr<data::SignalData> > get_data() const;
-
-	std::vector< boost::shared_ptr<view::Signal> >
-		get_signals();
-
-    std::vector< boost::shared_ptr<view::GroupSignal> >
-        get_group_signals();
-
-#ifdef ENABLE_DECODE
-    bool add_decoder(srd_decoder *const dec, bool silent);
-
-    std::vector< boost::shared_ptr<view::DecodeTrace> >
-        get_decode_signals() const;
-
-    void remove_decode_signal(view::DecodeTrace *signal);
-
-    void remove_decode_signal(int index);
-
-    void rst_decoder(int index);
-
-    void rst_decoder(view::DecodeTrace *signal);
-
-    pv::data::DecoderModel* get_decoder_model() const;
-#endif
-
-    std::vector< boost::shared_ptr<view::MathTrace> >
-        get_math_signals();
-
-    void init_signals();
-
-    void add_group();
-
-    void del_group();
-
-    void start_hotplug_proc(boost::function<void (const QString)> error_handler);
-    void stop_hotplug_proc();
-	void register_hotplug_callback();
-    void deregister_hotplug_callback();
 
     uint16_t get_ch_num(int type);
     
     bool get_instant();
-
-    bool get_data_lock();
-    void mathTraces_rebuild();
-
-    bool trigd() const;
-
-    boost::shared_ptr<data::Snapshot> get_snapshot(int type);
 
     error_state get_error() const;
     void set_error(error_state state);
@@ -206,50 +153,17 @@ public:
     int get_repeat_intvl() const;
     void set_repeat_intvl(int interval);
     bool isRepeating() const;
-    bool repeat_check();
-    int get_repeat_hold() const;
-
-    int get_map_zoom() const;
 
 private:
 	void set_capture_state(capture_state state);
 
 private:
-    /**
-     * Attempts to autodetect the format. Failing that
-     * @param filename The filename of the input file.
-     * @return A pointer to the 'struct sr_input_format' that should be
-     * 	used, or NULL if no input format was selected or
-     * 	auto-detected.
-     */
-    static sr_input_format* determine_input_file_format(
-        const std::string &filename);
+    void sample_thread_proc(boost::shared_ptr<device::DevInst> dev_inst);
 
-    static sr_input* load_input_file_format(
-        const std::string &filename,
-        boost::function<void (const QString)> error_handler,
-        sr_input_format *format = NULL);
-
-    void sample_thread_proc(boost::shared_ptr<device::DevInst> dev_inst,
-                            boost::function<void (const QString)> error_handler);
-
-    // data feed
-	void feed_in_header(const sr_dev_inst *sdi);
-	void feed_in_meta(const sr_dev_inst *sdi,
-		const sr_datafeed_meta &meta);
-    void feed_in_trigger(const ds_trigger_pos &trigger_pos);
-	void feed_in_logic(const sr_datafeed_logic &logic);
-    void feed_in_dso(const sr_datafeed_dso &dso);
-	void feed_in_analog(const sr_datafeed_analog &analog);
 	void data_feed_in(const struct sr_dev_inst *sdi,
 		const struct sr_datafeed_packet *packet);
 	static void data_feed_in_proc(const struct sr_dev_inst *sdi,
 		const struct sr_datafeed_packet *packet, void *cb_data);
-
-    // thread for hotplug
-    void hotplug_proc(boost::function<void (const QString)> error_handler);
-    static int hotplug_callback(struct libusb_context *ctx, struct libusb_device *dev,
-                                libusb_hotplug_event event, void *user_data);
 
 private:
 	DeviceManager &_device_manager;
@@ -265,24 +179,6 @@ private:
     uint64_t _cur_samplerate;
     uint64_t _cur_samplelimits;
 
-    //mutable boost::mutex _signals_mutex;
-	std::vector< boost::shared_ptr<view::Signal> > _signals;
-    std::vector< boost::shared_ptr<view::GroupSignal> > _group_traces;
-#ifdef ENABLE_DECODE
-    std::vector< boost::shared_ptr<view::DecodeTrace> > _decode_traces;
-    pv::data::DecoderModel *_decoder_model;
-#endif
-    std::vector< boost::shared_ptr<view::MathTrace> > _math_traces;
-
-    mutable boost::mutex _data_mutex;
-	boost::shared_ptr<data::Logic> _logic_data;
-	boost::shared_ptr<data::LogicSnapshot> _cur_logic_snapshot;
-    boost::shared_ptr<data::Dso> _dso_data;
-    boost::shared_ptr<data::DsoSnapshot> _cur_dso_snapshot;
-	boost::shared_ptr<data::Analog> _analog_data;
-	boost::shared_ptr<data::AnalogSnapshot> _cur_analog_snapshot;
-    boost::shared_ptr<data::Group> _group_data;
-    boost::shared_ptr<data::GroupSnapshot> _cur_group_snapshot;
     int _group_cnt;
 
 	std::unique_ptr<boost::thread> _sampling_thread;
@@ -292,12 +188,10 @@ private:
     bool _hot_attach;
     bool _hot_detach;
 
-    QTimer _view_timer;
     int    _noData_cnt;
     bool _data_lock;
     bool _data_updated;
 
-    QDateTime _trigger_time;
     uint64_t _trigger_pos;
     bool _trigger_flag;
     bool _hw_replied;
@@ -311,62 +205,6 @@ private:
     int _repeat_hold_prg;
 
     int _map_zoom;
-
-signals:
-	void capture_state_changed(int state);
-
-	void signals_changed();
-
-	void data_updated();
-
-    void receive_data(quint64 length);
-
-    void device_attach();
-    void device_detach();
-
-    void receive_trigger(quint64 trigger_pos);
-
-    void receive_header();
-
-    void dso_ch_changed(uint16_t num);
-
-    void frame_began();
-
-    void data_received();
-
-    void frame_ended();
-
-    void device_setted();
-
-    void zero_adj();
-    void progressSaveFileValueChanged(int percent);
-
-    void decode_done();
-
-    void show_region(uint64_t start, uint64_t end, bool keep);
-
-    void show_wait_trigger();
-
-    void session_save();
-
-    void session_error();
-
-    void repeat_hold(int percent);
-    void repeat_resume();
-
-public slots:
-    void reload();
-    void refresh(int holdtime);
-    void stop_capture();
-    // repeat
-    void set_repeating(bool repeat);
-    void set_map_zoom(int index);
-
-private slots:
-    void data_unlock();
-    void check_update();
-    void nodata_timeout();
-    void repeat_update();
 
 private:
 	// TODO: This should not be necessary. Multiple concurrent

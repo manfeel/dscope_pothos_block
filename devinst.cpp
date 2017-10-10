@@ -87,7 +87,7 @@ void* DevInst::get_id() const
     return _id;
 }
 
-void DevInst::use(SigSession *owner) throw(QString)
+void DevInst::use(SigSession *owner)
 {
 	assert(owner);
 	assert(!_owner);
@@ -125,7 +125,6 @@ bool DevInst::set_config(sr_channel *ch, sr_channel_group *group, int key, GVari
 	sr_dev_inst *const sdi = dev_inst();
 	assert(sdi);
     if(sr_config_set(sdi, ch, group, key, data) == SR_OK) {
-		config_changed();
 		return true;
 	}
 	return false;
@@ -150,7 +149,6 @@ void DevInst::enable_probe(const sr_channel *probe, bool enable)
 	for (const GSList *p = sdi->channels; p; p = p->next)
 		if (probe == p->data) {
 			const_cast<sr_channel*>(probe)->enabled = enable;
-			config_changed();
 			return;
 		}
 
@@ -220,7 +218,7 @@ GSList* DevInst::get_dev_mode_list()
     return sr_dev_mode_list(sdi);
 }
 
-char* DevInst::name()
+std::string DevInst::name()
 {
     sr_dev_inst *const sdi = dev_inst();
     assert(sdi);
@@ -235,7 +233,7 @@ bool DevInst::is_trigger_enabled() const
 void DevInst::start()
 {
 	if (sr_session_start() != SR_OK)
-		throw new Exception("Failed to start session.");
+		throw ("Failed to start session.");
 }
 
 void DevInst::run()

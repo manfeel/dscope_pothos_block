@@ -8,6 +8,12 @@
 #include <Poco/Logger.h>
 #include <chrono>
 
+#include "devicemanager.h"
+#include "sigsession.h"
+
+
+//char DS_RES_PATH[256];//="/usr/local/share/DSView/res/";
+
 /***********************************************************************
  * |PothosDoc Audio Source
  *
@@ -101,11 +107,20 @@ public:
     DscopeSource(const Pothos::DType &dtype, const size_t numChans, const std::string &chanMode) {
         //setup ports
         bool _interleaved = false;
+
         if (_interleaved) this->setupOutput(0, Pothos::DType::fromDType(dtype, numChans));
         else for (size_t i = 0; i < numChans; i++) this->setupOutput(i, dtype);
+        //activate();
     }
 
-    static Block *make(const Pothos::DType &dtype, const size_t numChans, const std::string &chanMode) {
+    static Pothos::Block *make(const Pothos::DType &dtype, const size_t numChans, const std::string &chanMode) {
+        //char res[]="/usr/local/share/DSView/res/";
+        //memcpy(DS_RES_PATH, res, sizeof(res));
+        return (Pothos::Block*)new DscopeSource(dtype, numChans, chanMode);
+    }
+
+
+    void activate(void) {
         struct sr_context *sr_ctx = NULL;
 
         sr_log_loglevel_set(SR_LOG_SPEW);
@@ -114,7 +129,14 @@ public:
         if (sr_init(&sr_ctx) != SR_OK) {
             printf("ERROR: libsigrok init failed.");
         }
-        return new DscopeSource(dtype, numChans, chanMode);
+
+        pv::DeviceManager _device_manager(sr_ctx);
+        pv::SigSession _session(_device_manager);
+
+        _session.set_default_device();
+        //_session.start_hotplug_proc(error_handler);
+        ds_trigger_init();
+        _session.start_capture(false);
     }
 
     void work(void) {

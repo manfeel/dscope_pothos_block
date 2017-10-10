@@ -20,11 +20,12 @@
  */
 
 #include <sstream>
-
+#include <iostream>
 #include "device.h"
 
 using std::ostringstream;
 using std::string;
+
 
 namespace pv {
 namespace device {
@@ -40,17 +41,17 @@ sr_dev_inst* Device::dev_inst() const
 	return _sdi;
 }
 
-void Device::use(SigSession *owner) throw(QString)
+void Device::use(SigSession *owner)
 {
     DevInst::use(owner);
-
+    std::cout << "in func (sr_session_new):" << __func__ << std::endl;
     sr_session_new();
 
     assert(_sdi);
     sr_dev_open(_sdi);
     _usable = (_sdi->status == SR_ST_ACTIVE);
     if (sr_session_dev_add(_sdi) != SR_OK)
-        throw QString(tr("Failed to use device."));
+        throw ("Failed to use device.");
 }
 
 void Device::release()

@@ -49,13 +49,13 @@ protected:
 public:
 	virtual sr_dev_inst* dev_inst() const = 0;
 
-	virtual void use(SigSession *owner) throw(QString);
+	virtual void use(SigSession *owner);
 
 	virtual void release();
 
 	SigSession* owner() const;
 
-    virtual QString format_device_title() const = 0;
+    virtual std::string format_device_title() const = 0;
 
     GVariant* get_config(const sr_channel *ch, const sr_channel_group *group, int key);
 
@@ -110,7 +110,7 @@ public:
      *
      * @return device name
      */
-    QString name();
+    std::string name();
 
 	virtual bool is_trigger_enabled() const;
 
@@ -122,10 +122,6 @@ public:
 	virtual void run();
 
     virtual void* get_id() const;
-
-signals:
-    void device_updated();
-	void config_changed();
 
 protected:
 	SigSession *_owner;

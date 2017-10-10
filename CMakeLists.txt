@@ -36,6 +36,10 @@ list(APPEND PKGDEPS
 find_package(PkgConfig)
 pkg_check_modules(PKGDEPS REQUIRED ${PKGDEPS})
 
+find_package(Threads)
+
+find_package(Boost 1.42 COMPONENTS filesystem system thread REQUIRED)
+
 ########################################################################
 # json.hpp header
 ########################################################################
@@ -76,7 +80,7 @@ POTHOS_MODULE_UTIL(
         sigsession.cpp
         device.cpp
         devinst.cpp
-    LIBRARIES ${PKGDEPS_LIBRARIES}
+    LIBRARIES ${PKGDEPS_LIBRARIES} ${Boost_LIBRARIES}
     DESTINATION dscope
     ENABLE_DOCS
 )

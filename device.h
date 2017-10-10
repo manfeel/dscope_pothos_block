@@ -34,11 +34,11 @@ public:
 
 	sr_dev_inst* dev_inst() const;
 
-    void use(SigSession *owner) throw(QString);
+    void use(SigSession *owner);
 
 	void release();
 
-    QString format_device_title() const;
+    std::string format_device_title() const;
 
 	bool is_trigger_enabled() const;
 
