@@ -11,11 +11,11 @@
 #include "devicemanager.h"
 #include "sigsession.h"
 
-
+using namespace std;
 //char DS_RES_PATH[256];//="/usr/local/share/DSView/res/";
 
 /***********************************************************************
- * |PothosDoc Audio Source
+ * |PothosDoc DSCope(Virtual Oscilloscope)
  *
  * The audio source forwards an audio input device to an output sample stream.
  * In interleaved mode, the samples are interleaved into one output port,
@@ -26,24 +26,27 @@
  * Downstream blocks like the plotter widgets can consume this label
  * and use it to set internal parameters like the axis scaling.
  *
- * |category /dsl
+ * |category /DreamSourceLab
  * |category /Sources
- * |keywords audio sound stereo mono microphone
+ * |keywords dscope oscilloscope
  *
- * |param deviceName[Device Name] The name of an audio device on the system,
- * the integer index of an audio device on the system,
- * or an empty string to use the default output device.
- * |widget StringEntry()
- * |default ""
- * |preview valid
  *
  * |param sampRate[Sample Rate] The rate of audio samples.
- * |option 32e3
- * |option 44.1e3
- * |option 48e3
- * |default 44.1e3
+ * |option 1e6
+ * |option 2e6
+ * |option 4e6
+ * |default 1e6
  * |units Sps
  * |widget ComboBox(editable=true)
+ *
+ * |param logLvl[Debug Log Level]
+ * |option [SR_LOG_NONE] 0
+ * |option [SR_LOG_ERR]  1
+ * |option [SR_LOG_WARN] 2
+ * |option [SR_LOG_INFO] 3
+ * |option [SR_LOG_DBG]  4
+ * |option [SR_LOG_SPEW] 5
+ * |default 1
  *
  * |param dtype[Data Type] The data type produced by the audio source.
  * |option [Float32] "float32"
@@ -54,89 +57,64 @@
  * |default "float32"
  * |preview disable
  *
- * |param numChans [Num Channels] The number of audio channels.
- * This parameter controls the number of samples per stream element.
- * |widget SpinBox(minimum=1)
- * |default 1
- *
- * |param chanMode [Channel Mode] The channel mode.
- * One port with interleaved channels or one port per channel?
- * |option [Interleaved channels] "INTERLEAVED"
- * |option [One port per channel] "PORTPERCHAN"
- * |default "INTERLEAVED"
- * |preview disable
- *
- * |param reportMode [Report Mode] Options for reporting overflow.
- * <ul>
- * <li>"LOGGER" - reports the full error message to the logger</li>
- * <li>"STDERROR" - prints "aO" (audio overflow) to stderror</li>
- * <li>"DISABLED" - disabled mode turns off all reporting</li>
- * </ul>
- * |default "STDERROR"
- * |option [Logging Subsystem] "LOGGER"
- * |option [Standard Error] "STDERROR"
- * |option [Reporting Disabled] "DISABLED"
- * |preview disable
- * |tab Overflow
- *
- * |param backoffTime [Backoff Time] Configurable wait for mitigating overflows.
- * The source block will not produce samples after an overflow for the specified wait time.
- * A small wait time of several milliseconds can help to prevent cascading overflows
- * when the downstream source is not keeping up with the configured audio rate.
- * |units milliseconds
- * |preview valid
- * |default 0
- * |tab Overflow
- *
- * |factory /dsl/dscope(dtype, numChans, chanMode)
- * |initializer setupDevice(deviceName)
- * |initializer setupStream(sampRate)
- * |setter setReportMode(reportMode)
- * |setter setBackoffTime(backoffTime)
+ * |factory /dsl/dscope(dtype)
+ * |initializer setupDevice(logLvl)
  **********************************************************************/
 class DscopeSource : public Pothos::Block {
 protected:
-    bool _interleaved;
+    //bool _interleaved;
     bool _sendLabel;
     bool _reportLogger;
     bool _reportStderror;
     std::chrono::high_resolution_clock::duration _backoffTime;
     std::chrono::high_resolution_clock::time_point _readyTime;
+    struct sr_context *sr_ctx = NULL;
+    DeviceManager *_device_manager = NULL;
+    SigSession *_session = NULL;
 
 public:
-    DscopeSource(const Pothos::DType &dtype, const size_t numChans, const std::string &chanMode) {
-        //setup ports
-        bool _interleaved = false;
+    DscopeSource(const Pothos::DType &dtype)
+    {
 
-        if (_interleaved) this->setupOutput(0, Pothos::DType::fromDType(dtype, numChans));
-        else for (size_t i = 0; i < numChans; i++) this->setupOutput(i, dtype);
-        //activate();
+        this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setupDevice));
+
+        this->setupOutput(0, dtype);
+        this->setupOutput(1, dtype);
+        //cout << __func__ << endl;
     }
 
-    static Pothos::Block *make(const Pothos::DType &dtype, const size_t numChans, const std::string &chanMode) {
-        //char res[]="/usr/local/share/DSView/res/";
-        //memcpy(DS_RES_PATH, res, sizeof(res));
-        return (Pothos::Block*)new DscopeSource(dtype, numChans, chanMode);
+    static Pothos::Block *make(const Pothos::DType &dtype) {
+        cout << __func__ << dtype.name() << endl;
+        return (Pothos::Block*)new DscopeSource(dtype);
     }
 
-
-    void activate(void) {
-        struct sr_context *sr_ctx = NULL;
-
-        sr_log_loglevel_set(SR_LOG_SPEW);
+    void setupDevice(int logLvl) {
+        cout << __func__ << endl;
+        sr_log_loglevel_set(logLvl);
 
         // Initialise libsigrok
         if (sr_init(&sr_ctx) != SR_OK) {
-            printf("ERROR: libsigrok init failed.");
+            throw Pothos::Exception(__func__, "ERROR: libsigrok init failed.");
         }
 
-        pv::DeviceManager _device_manager(sr_ctx);
-        pv::SigSession _session(_device_manager);
+        try {
+            _device_manager = new DeviceManager(sr_ctx);
+            _session = new SigSession(*_device_manager);
 
-        _session.set_default_device();
-        //_session.start_hotplug_proc(error_handler);
-        ds_trigger_init();
-        _session.start_capture(false);
+            _session->set_default_device();
+            //_session.start_hotplug_proc(error_handler);
+            ds_trigger_init();
+        } catch(Pothos::Exception e) {
+            std::cout << e.message() << std::endl;
+        }
+    }
+
+    void activate(void) {
+        _session->start_capture(false);
+    }
+
+    void deactivate(void) {
+        _session->stop_capture();
     }
 
     void work(void) {
@@ -151,9 +129,7 @@ public:
         numFrames = std::min<int>(numFrames, this->workInfo().minOutElements);
 
         //get the buffer
-        void *buffer = nullptr;
-        if (_interleaved) buffer = this->workInfo().outputPointers[0];
-        else buffer = (void *) this->workInfo().outputPointers.data();
+        void *buffer = (void *) this->workInfo().outputPointers.data();
 
         //peform read from the device
         /*

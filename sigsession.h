@@ -39,42 +39,20 @@
 #include <libsigrok4DSL/libsigrok.h>
 #include <libusb.h>
 
+#include "dso.h"
+#include "dsosnapshot.h"
+
 struct srd_decoder;
 struct srd_channel;
 
-namespace pv {
+//namespace pv {
 
 class DeviceManager;
 
-namespace data {
-class SignalData;
-class Snapshot;
-class Analog;
-class AnalogSnapshot;
-class Dso;
-class DsoSnapshot;
-class Logic;
-class LogicSnapshot;
-class Group;
-class GroupSnapshot;
-class DecoderModel;
-}
-
-namespace device {
+//namespace device {
 class DevInst;
-}
+//}
 
-namespace view {
-class Signal;
-class GroupSignal;
-class DecodeTrace;
-class MathTrace;
-}
-
-namespace decoder {
-class Decoder;
-class DecoderFactory;
-}
 
 class SigSession
 {
@@ -115,16 +93,16 @@ public:
 
 	~SigSession();
 
-    boost::shared_ptr<device::DevInst> get_device() const;
+    boost::shared_ptr<DevInst> get_device() const;
 
 	/**
 	 * Sets device instance that will be used in the next capture session.
 	 */
-    void set_device(boost::shared_ptr<device::DevInst> dev_inst);
+    void set_device(boost::shared_ptr<DevInst> dev_inst);
 
     void set_default_device();
 
-    void release_device(device::DevInst *dev_inst);
+    void release_device(DevInst *dev_inst);
 
 	capture_state get_capture_state() const;
 
@@ -137,6 +115,7 @@ public:
     void start_capture(bool instant);
 	void stop_capture();
     void capture_init();
+	void init_signals();
     bool get_capture_status(bool &triggered, int &progress);
 
     uint16_t get_ch_num(int type);
@@ -153,17 +132,18 @@ public:
     int get_repeat_intvl() const;
     void set_repeat_intvl(int interval);
     bool isRepeating() const;
-
+	boost::shared_ptr<DsoSnapshot> get_snapshot();
 private:
 	void set_capture_state(capture_state state);
 
 private:
-    void sample_thread_proc(boost::shared_ptr<device::DevInst> dev_inst);
+    void sample_thread_proc(boost::shared_ptr<DevInst> dev_inst);
 
 	void data_feed_in(const struct sr_dev_inst *sdi,
 		const struct sr_datafeed_packet *packet);
 	static void data_feed_in_proc(const struct sr_dev_inst *sdi,
 		const struct sr_datafeed_packet *packet, void *cb_data);
+	void feed_in_dso(const sr_datafeed_dso &dso);
 
 private:
 	DeviceManager &_device_manager;
@@ -171,7 +151,7 @@ private:
 	/**
 	 * The device instance that will be used in the next capture session.
 	 */
-    boost::shared_ptr<device::DevInst> _dev_inst;
+    boost::shared_ptr<DevInst> _dev_inst;
 
     mutable boost::mutex _sampling_mutex;
 	capture_state _capture_state;
@@ -206,6 +186,8 @@ private:
 
     int _map_zoom;
 
+	boost::shared_ptr<Dso> _dso_data;
+	boost::shared_ptr<DsoSnapshot> _cur_dso_snapshot;
 private:
 	// TODO: This should not be necessary. Multiple concurrent
 	// sessions should should be supported and it should be
@@ -213,6 +195,6 @@ private:
 	static SigSession *_session;
 };
 
-} // namespace pv
+//} // namespace pv
 
 #endif // DSVIEW_PV_SIGSESSION_H

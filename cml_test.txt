@@ -1,0 +1,59 @@
+########################################################################
+# Project setup
+########################################################################
+cmake_minimum_required(VERSION 2.8.9)
+project(DSCope CXX)
+
+include(FindPkgConfig)
+
+#===============================================================================
+#= User Options
+#-------------------------------------------------------------------------------
+
+option(DISABLE_WERROR "Build without -Werror" TRUE)
+option(ENABLE_SIGNALS "Build with UNIX signals" TRUE)
+option(ENABLE_DECODE "Build with libsigrokdecode4DSL" FALSE)
+option(STATIC_PKGDEPS_LIBS "Statically link to (pkg-config) libraries" FALSE)
+
+add_definitions(-std=c++11 -Wall -Wextra -Wno-return-type -Wno-ignored-qualifiers)
+
+#===============================================================================
+#= Dependencies
+#-------------------------------------------------------------------------------
+
+list(APPEND PKGDEPS
+	"libsigrok4DSL >= 0.2.0"
+	"libusb-1.0 >= 1.0.16"
+	"libzip >= 0.10"
+)
+
+find_package(PkgConfig)
+pkg_check_modules(PKGDEPS REQUIRED ${PKGDEPS})
+
+find_package(Threads)
+
+find_package(Boost 1.42 COMPONENTS filesystem system thread REQUIRED)
+
+########################################################################
+## Build and install module
+########################################################################
+include_directories(${PKGDEPS_INCLUDE_DIRS})
+add_definitions(${PKGDEPS_DEFINITIONS})
+
+
+set(SOURCE_FILES
+        main.cpp
+        devicemanager.cpp
+        sigsession.cpp
+        device.cpp
+        devinst.cpp
+		snapshot.cpp
+		dsosnapshot.cpp
+		dso.cpp
+		blockingqueue.cpp)
+
+add_executable(${PROJECT_NAME}
+        ${SOURCE_FILES}
+        )
+
+target_link_libraries(${PROJECT_NAME} ${PKGDEPS_LIBRARIES} ${Boost_LIBRARIES} -pthread)

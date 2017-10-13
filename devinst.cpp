@@ -27,8 +27,8 @@
 
 #include "sigsession.h"
 
-namespace pv {
-namespace device {
+//namespace pv {
+//namespace device {
 
 // add by manfeel
 static void full_write(int fd, const char *buf, size_t len)
@@ -246,5 +246,53 @@ bool DevInst::is_usable() const
     return _usable;
 }
 
-} // device
-} // pv
+sr_channel* DevInst::get_channel(int ch_index)
+{
+    assert(ch_index ==0 || ch_index == 1);
+
+    for (const GSList *l = dev_inst()->channels; l; l = l->next) {
+        sr_channel *p = (sr_channel *)l->data;
+        assert(p);
+        if(ch_index == p->index)
+            return p;
+    }
+    return nullptr;
+}
+
+void DevInst::set_ch_enable(int ch_index, bool enable) {
+
+    GVariant *gvar;
+    bool cur_enable;
+
+    sr_channel* ch=get_channel(ch_index);
+    assert(ch);
+
+    gvar = get_config(ch, NULL, SR_CONF_EN_CH);
+    if (gvar != NULL) {
+        cur_enable = g_variant_get_boolean(gvar);
+        g_variant_unref(gvar);
+    } else {
+        std::cout << "ERROR: config_get SR_CONF_EN_CH failed." << std::endl;
+        return;
+    }
+    if (cur_enable == enable)
+        return;
+
+    set_config(ch, NULL, SR_CONF_EN_CH, g_variant_new_boolean(enable));
+}
+
+void DevInst::set_sample_rate(uint64_t sample_rate)
+{
+    set_config(NULL, NULL,
+               SR_CONF_SAMPLERATE,
+               g_variant_new_uint64(sample_rate));
+}
+
+void DevInst::set_limit_samples(uint64_t sample_count)
+{
+    set_config(NULL, NULL,
+               SR_CONF_LIMIT_SAMPLES,
+               g_variant_new_uint64(sample_count));
+}
+//} // device
+//} // pv

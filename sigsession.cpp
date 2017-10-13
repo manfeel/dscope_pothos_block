@@ -45,7 +45,7 @@
 using namespace boost;
 using namespace std;
 
-namespace pv {
+//namespace pv {
 
 // TODO: This should not be necessary
 SigSession* SigSession::_session = NULL;
@@ -69,6 +69,10 @@ SigSession::SigSession(DeviceManager &device_manager) :
     _noData_cnt = 0;
     _data_lock = false;
     _data_updated = false;
+
+    //_cur_dso_snapshot.reset(new DsoSnapshot());
+    //_dso_data.reset(new Dso());
+    //_dso_data->push_snapshot(_cur_dso_snapshot);
 }
 
 SigSession::~SigSession()
@@ -83,14 +87,14 @@ SigSession::~SigSession()
 	_session = NULL;
 }
 
-boost::shared_ptr<device::DevInst> SigSession::get_device() const
+boost::shared_ptr<DevInst> SigSession::get_device() const
 {
     return _dev_inst;
 }
 
-void SigSession::set_device(boost::shared_ptr<device::DevInst> dev_inst)
+void SigSession::set_device(boost::shared_ptr<DevInst> dev_inst)
 {
-    using pv::device::Device;
+    //using pv::device::Device;
 
     // Ensure we are not capturing before setting the device
     //stop_capture();
@@ -123,8 +127,8 @@ void SigSession::set_device(boost::shared_ptr<device::DevInst> dev_inst)
 
 void SigSession::set_default_device()
 {
-    boost::shared_ptr<pv::device::DevInst> default_device;
-    const list<boost::shared_ptr<device::DevInst> > &devices =
+    boost::shared_ptr<DevInst> default_device;
+    const list<boost::shared_ptr<DevInst> > &devices =
         _device_manager.devices();
 
     if (!devices.empty()) {
@@ -132,7 +136,7 @@ void SigSession::set_default_device()
         default_device = devices.front();
 
         // Try and find the DreamSourceLab device and select that by default
-        BOOST_FOREACH (boost::shared_ptr<pv::device::DevInst> dev, devices)
+        BOOST_FOREACH (boost::shared_ptr<DevInst> dev, devices)
             if (dev->dev_inst() &&
                     (dev->name().find("virtual") == std::string::npos)) {
                 default_device = dev;
@@ -147,13 +151,13 @@ void SigSession::set_default_device()
     }
 }
 
-void SigSession::release_device(device::DevInst *dev_inst)
+void SigSession::release_device(DevInst *dev_inst)
 {
     (void)dev_inst;
     assert(_dev_inst.get() == dev_inst);
 
     assert(get_capture_state() != Running);
-    _dev_inst = boost::shared_ptr<device::DevInst>();
+    _dev_inst = boost::shared_ptr<DevInst>();
     //_dev_inst.reset();
 }
 
@@ -186,6 +190,8 @@ void SigSession::set_cur_samplerate(uint64_t samplerate)
     assert(samplerate != 0);
     _cur_samplerate = samplerate;
     // TODO: populate samplerate to real device
+    //if (_dso_data)
+    //    _dso_data->set_samplerate(_cur_samplerate);
 }
 
 void SigSession::set_cur_samplelimits(uint64_t samplelimits)
@@ -196,6 +202,44 @@ void SigSession::set_cur_samplelimits(uint64_t samplelimits)
 }
 
 
+void SigSession::init_signals()
+{
+    assert(_dev_inst);
+    stop_capture();
+
+    unsigned int logic_probe_count = 0;
+    unsigned int dso_probe_count = 0;
+    unsigned int analog_probe_count = 0;
+
+    //if (_dso_data)
+    //    _dso_data->clear();
+
+    // Detect what data types we will receive
+    if(_dev_inst) {
+        assert(_dev_inst->dev_inst());
+        for (const GSList *l = _dev_inst->dev_inst()->channels;
+             l; l = l->next) {
+            const sr_channel *const probe = (const sr_channel *)l->data;
+
+            switch(probe->type) {
+                case SR_CHANNEL_LOGIC:
+                    if(probe->enabled)
+                        logic_probe_count++;
+                    break;
+
+                case SR_CHANNEL_DSO:
+                    dso_probe_count++;
+                    break;
+
+                case SR_CHANNEL_ANALOG:
+                    if(probe->enabled)
+                        analog_probe_count++;
+                    break;
+            }
+        }
+    }
+}
+
 void SigSession::capture_init()
 {
     _cur_samplerate = _dev_inst->get_sample_rate();
@@ -204,6 +248,11 @@ void SigSession::capture_init()
     _trigger_flag = false;
     _hw_replied = false;
     _noData_cnt = 0;
+    //
+    //if (_dso_data) {
+    //    _dso_data->init();
+    //    _dso_data->set_samplerate(_cur_samplerate);
+    //}
 }
 
 
@@ -297,7 +346,7 @@ void SigSession::set_capture_state(capture_state state)
 	_capture_state = state;
 }
 
-void SigSession::sample_thread_proc(boost::shared_ptr<device::DevInst> dev_inst)
+void SigSession::sample_thread_proc(boost::shared_ptr<DevInst> dev_inst)
 {
     assert(dev_inst);
     assert(dev_inst->dev_inst());
@@ -353,7 +402,7 @@ void SigSession::data_feed_in(const struct sr_dev_inst *sdi,
 
     case SR_DF_DSO:
         assert(packet->payload);
-        //feed_in_dso(*(const sr_datafeed_dso*)packet->payload);
+        feed_in_dso(*(const sr_datafeed_dso*)packet->payload);
         break;
 
 	case SR_DF_ANALOG:
@@ -371,6 +420,7 @@ void SigSession::data_feed_in(const struct sr_dev_inst *sdi,
     }
 	case SR_DF_END:
 	{
+        _cur_dso_snapshot->capture_ended();
         if (packet->status != SR_PKT_OK) {
             _error = Pkt_data_err;
 //            session_error();
@@ -387,6 +437,50 @@ void SigSession::data_feed_in_proc(const struct sr_dev_inst *sdi,
 	(void) cb_data;
 	assert(_session);
 	_session->data_feed_in(sdi, packet);
+}
+
+
+void SigSession::feed_in_dso(const sr_datafeed_dso &dso) {
+    std::cout << dso.num_samples << std::endl;
+}
+
+/*
+void SigSession::feed_in_dso(const sr_datafeed_dso &dso)
+{
+    //boost::lock_guard<boost::mutex> lock(_data_mutex);
+
+    if(!_dso_data || _cur_dso_snapshot->memory_failed())
+    {
+        cout << "Unexpected dso packet" << endl;
+        return;	// This dso packet was not expected.
+    }
+
+    if (_cur_dso_snapshot->last_ended())
+    {
+        std::map<int, bool> sig_enable;
+        // reset scale of dso signal
+        for (const GSList *l = _dev_inst->dev_inst()->channels; l; l = l->next) {
+            sr_channel *p = (sr_channel *)l->data;
+            assert(p);
+            sig_enable[p->index] = p->enabled;
+        }
+        // first payload
+        _cur_dso_snapshot->first_payload(dso, _dev_inst->get_sample_limit(), sig_enable, _instant);
+    } else {
+        // Append to the existing data snapshot
+        _cur_dso_snapshot->append_payload(dso);
+    }
+    if (_cur_dso_snapshot->memory_failed()) {
+        _error = Malloc_err;
+        //session_error();
+        cout << "session error!" << endl;
+        return;
+    }
+}*/
+
+boost::shared_ptr<DsoSnapshot> SigSession::get_snapshot()
+{
+    return _cur_dso_snapshot;
 }
 
 uint16_t SigSession::get_ch_num(int type)
@@ -439,4 +533,4 @@ bool SigSession::isRepeating() const
 {
     return _repeating;
 }
-} // namespace pv
+//} // namespace pv

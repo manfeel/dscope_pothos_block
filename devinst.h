@@ -34,11 +34,11 @@ struct sr_dev_inst;
 struct sr_channel;
 struct sr_channel_group;
 
-namespace pv {
+//namespace pv {
 
 class SigSession;
 
-namespace device {
+//namespace device {
 
 class DevInst {
 
@@ -123,13 +123,17 @@ public:
 
     virtual void* get_id() const;
 
+	virtual sr_channel* get_channel(int ch_index);
+	virtual void set_ch_enable(int ch_index, bool enable);
+	virtual void set_sample_rate(uint64_t sample_rate);
+	virtual void set_limit_samples(uint64_t sample_count);
 protected:
 	SigSession *_owner;
     void *_id;
     bool _usable;
 };
 
-} // device
-} // pv
+//} // device
+//} // pv
 
 #endif // DSVIEW_PV_DEVICE_DEVINST_H

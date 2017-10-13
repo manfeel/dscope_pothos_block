@@ -43,7 +43,7 @@ using std::ostringstream;
 using std::runtime_error;
 using std::string;
 
-namespace pv {
+//namespace pv {
 
     DeviceManager::DeviceManager(struct sr_context *sr_ctx) :
             _sr_ctx(sr_ctx)
@@ -57,12 +57,12 @@ namespace pv {
         release_devices();
     }
 
-    const std::list<boost::shared_ptr<device::DevInst> > &DeviceManager::devices() const
+    const std::list<boost::shared_ptr<DevInst> > &DeviceManager::devices() const
     {
         return _devices;
     }
 
-    void DeviceManager::add_device(boost::shared_ptr<pv::device::DevInst> device)
+    void DeviceManager::add_device(boost::shared_ptr<DevInst> device)
     {
         assert(device);
 
@@ -71,16 +71,16 @@ namespace pv {
             _devices.push_front(device);
     }
 
-    std::list<boost::shared_ptr<device::DevInst> > DeviceManager::driver_scan(
+    std::list<boost::shared_ptr<DevInst> > DeviceManager::driver_scan(
             struct sr_dev_driver *const driver, GSList *const drvopts)
     {
-        list< shared_ptr<device::DevInst> > driver_devices;
+        list< shared_ptr<DevInst> > driver_devices;
 
         assert(driver);
 
         // Remove any device instances from this driver from the device
         // list. They will not be valid after the scan.
-        list< shared_ptr<device::DevInst> >::iterator i = _devices.begin();
+        list< shared_ptr<DevInst> >::iterator i = _devices.begin();
         while (i != _devices.end()) {
             if ((*i)->dev_inst() &&
                 (*i)->dev_inst()->driver == driver) {
@@ -105,8 +105,8 @@ namespace pv {
         // Do the scan
         GSList *const devices = sr_driver_scan(driver, drvopts);
         for (GSList *l = devices; l; l = l->next)
-            driver_devices.push_front(shared_ptr<device::DevInst>(
-                    new device::Device((sr_dev_inst*)l->data)));
+            driver_devices.push_front(shared_ptr<DevInst>(
+                    new Device((sr_dev_inst*)l->data)));
         g_slist_free(devices);
         //driver_devices.sort(compare_devices);
 
@@ -134,7 +134,7 @@ namespace pv {
     void DeviceManager::release_devices()
     {
         // Release all the used devices
-        BOOST_FOREACH(shared_ptr<device::DevInst> dev, _devices) {
+        BOOST_FOREACH(shared_ptr<DevInst> dev, _devices) {
                         assert(dev);
                         dev->release();
                     }
@@ -155,7 +155,7 @@ namespace pv {
 
     void DeviceManager::release_driver(struct sr_dev_driver *const driver)
     {
-        BOOST_FOREACH(shared_ptr<device::DevInst> dev, _devices) {
+        BOOST_FOREACH(shared_ptr<DevInst> dev, _devices) {
                         assert(dev);
                         if(dev->dev_inst()->driver == driver)
                             dev->release();
@@ -165,12 +165,12 @@ namespace pv {
         sr_dev_clear(driver);
     }
 
-    bool DeviceManager::compare_devices(boost::shared_ptr<device::DevInst> a,
-                                        boost::shared_ptr<device::DevInst> b)
+    bool DeviceManager::compare_devices(boost::shared_ptr<DevInst> a,
+                                        boost::shared_ptr<DevInst> b)
     {
         assert(a);
         assert(b);
         return a->format_device_title().compare(b->format_device_title()) <= 0;
     }
 
-}
+//}

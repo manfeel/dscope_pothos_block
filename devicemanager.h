@@ -33,6 +33,8 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
+#include "devinst.h"
+#include "device.h"
 
 struct sr_context;
 struct sr_dev_driver;
@@ -40,13 +42,13 @@ struct sr_dev_inst;
 struct libusbhp_t;
 struct libusbhp_device_t;
 
-namespace pv {
+//namespace pv {
 
-    class SigSession;
+//    class SigSession;
 
-    namespace device {
-        class DevInst;
-    }
+//    namespace device {
+//        class DevInst;
+//    }
 
     class DeviceManager
     {
@@ -55,11 +57,11 @@ namespace pv {
 
         ~DeviceManager();
 
-        const std::list< boost::shared_ptr<pv::device::DevInst> >& devices() const;
+        const std::list< boost::shared_ptr<DevInst> >& devices() const;
 
-        void add_device(boost::shared_ptr<pv::device::DevInst> device);
+        void add_device(boost::shared_ptr<DevInst> device);
 
-        std::list< boost::shared_ptr<pv::device::DevInst> > driver_scan(
+        std::list< boost::shared_ptr<DevInst> > driver_scan(
                 struct sr_dev_driver *const driver,
                 GSList *const drvopts = NULL);
 
@@ -72,14 +74,14 @@ namespace pv {
 
         void release_driver(struct sr_dev_driver *const driver);
 
-        static bool compare_devices(boost::shared_ptr<device::DevInst> a,
-                                    boost::shared_ptr<device::DevInst> b);
+        static bool compare_devices(boost::shared_ptr<DevInst> a,
+                                    boost::shared_ptr<DevInst> b);
 
     private:
         struct sr_context *const _sr_ctx;
-        std::list< boost::shared_ptr<pv::device::DevInst> > _devices;
+        std::list< boost::shared_ptr<DevInst> > _devices;
     };
 
-} // namespace pv
+//} // namespace pv
 
 #endif

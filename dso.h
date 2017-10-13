@@ -2,7 +2,7 @@
  * This file is part of the DSView project.
  * DSView is based on PulseView.
  *
- * Copyright (C) 2014 Joel Holdsworth <joel@airwebreathe.org.uk>
+ * Copyright (C) 2013 DreamSourceLab <support@dreamsourcelab.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,35 +19,40 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
-#ifndef DSVIEW_PV_DEVICE_DEVICE_H
-#define DSVIEW_PV_DEVICE_DEVICE_H
 
-#include "devinst.h"
+#ifndef DSVIEW_PV_DATA_DSO_H
+#define DSVIEW_PV_DATA_DSO_H
 
-//namespace pv {
-//namespace device {
+//#include "signaldata.h"
 
-class Device : public DevInst
+#include <boost/shared_ptr.hpp>
+#include <deque>
+
+class DsoSnapshot;
+
+class Dso// : public SignalData
 {
 public:
-	Device(sr_dev_inst *dev_inst);
+    Dso();
 
-	sr_dev_inst* dev_inst() const;
+	void push_snapshot(
+        boost::shared_ptr<DsoSnapshot> &snapshot);
 
-    void use(SigSession *owner);
+    std::deque< boost::shared_ptr<DsoSnapshot> >&
+		get_snapshots();
 
-	void release();
+    void clear();
+    void init();
+	double samplerate() const;
+	void set_samplerate(double samplerate);
 
-    std::string format_device_title() const;
-
-	bool is_trigger_enabled() const;
-	//sr_channel* get_channel(int ch_index);
-	//void set_ch_enable(int ch_index, bool enable);
+protected:
+	double _samplerate;
 private:
-	sr_dev_inst *const _sdi;
+    std::deque< boost::shared_ptr<DsoSnapshot> > _snapshots;
 };
 
-//} // device
-//} // pv
+//} // namespace data
+//} // namespace pv
 
-#endif // DSVIEW_PV_DEVICE_DEVICE_H
+#endif // DSVIEW_PV_DATA_DSO_H
