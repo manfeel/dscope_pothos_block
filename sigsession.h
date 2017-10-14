@@ -39,8 +39,8 @@
 #include <libsigrok4DSL/libsigrok.h>
 #include <libusb.h>
 
-#include "dso.h"
-#include "dsosnapshot.h"
+//#include "dso.h"
+//#include "dsosnapshot.h"
 #include "blockingqueue.hpp"
 
 struct srd_decoder;
@@ -133,7 +133,7 @@ public:
     int get_repeat_intvl() const;
     void set_repeat_intvl(int interval);
     bool isRepeating() const;
-	boost::shared_ptr<DsoSnapshot> get_snapshot();
+	//boost::shared_ptr<DsoSnapshot> get_snapshot();
 private:
 	void set_capture_state(capture_state state);
 
@@ -187,8 +187,8 @@ private:
 
     int _map_zoom;
 
-	boost::shared_ptr<Dso> _dso_data;
-	boost::shared_ptr<DsoSnapshot> _cur_dso_snapshot;
+	//boost::shared_ptr<Dso> _dso_data;
+	//boost::shared_ptr<DsoSnapshot> _cur_dso_snapshot;
 private:
 	// TODO: This should not be necessary. Multiple concurrent
 	// sessions should should be supported and it should be

@@ -120,7 +120,7 @@ GVariant* DevInst::get_config(const sr_channel *ch, const sr_channel_group *grou
 
 bool DevInst::set_config(sr_channel *ch, sr_channel_group *group, int key, GVariant *data)
 {
-	print_backtrace();
+	//print_backtrace();
 	assert(_owner);
 	sr_dev_inst *const sdi = dev_inst();
 	assert(sdi);

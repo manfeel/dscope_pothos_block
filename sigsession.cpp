@@ -421,7 +421,7 @@ void SigSession::data_feed_in(const struct sr_dev_inst *sdi,
     }
 	case SR_DF_END:
 	{
-        _cur_dso_snapshot->capture_ended();
+        //_cur_dso_snapshot->capture_ended();
         if (packet->status != SR_PKT_OK) {
             _error = Pkt_data_err;
 //            session_error();
@@ -480,10 +480,10 @@ void SigSession::feed_in_dso(const sr_datafeed_dso &dso)
     }
 }*/
 
-boost::shared_ptr<DsoSnapshot> SigSession::get_snapshot()
-{
-    return _cur_dso_snapshot;
-}
+//boost::shared_ptr<DsoSnapshot> SigSession::get_snapshot()
+//{
+//    return _cur_dso_snapshot;
+//}
 
 uint16_t SigSession::get_ch_num(int type)
 {

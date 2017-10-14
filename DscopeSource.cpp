@@ -35,9 +35,27 @@ using namespace std;
  * |param sampRate[Sample Rate] The rate of audio samples.
  * |option 1e6
  * |option 2e6
- * |option 4e6
- * |default 1e6
+ * |option 5e6
+ * |option 10e6
+ * |option 20e6
+ * |option 50e6
+ * |option 100e6
+ * |option 200e6
+ * |default 100e6
  * |units Sps
+ * |widget ComboBox(editable=true)
+ *
+ * |param vdiv[Voltage Div] The rate of voltage.
+ * |option [10mv] 10
+ * |option [20mv] 20
+ * |option [50mv] 50
+ * |option [100mv] 100
+ * |option [200mv] 200
+ * |option [500mv] 500
+ * |option [1v] 1000
+ * |option [2v] 2000
+ * |default 50
+ * |units mv
  * |widget ComboBox(editable=true)
  *
  * |param logLvl[Debug Log Level]
@@ -51,15 +69,13 @@ using namespace std;
  *
  * |param dtype[Data Type] The data type produced by the audio source.
  * |option [Float32] "float32"
- * |option [Int32] "int32"
- * |option [Int16] "int16"
- * |option [Int8] "int8"
- * |option [UInt8] "uint8"
  * |default "float32"
  * |preview disable
  *
  * |factory /dsl/dscope(dtype)
  * |initializer setupDevice(logLvl)
+ * |setter setSamplerate(sampRate)
+ * |setter setVdiv(vdiv)
  **********************************************************************/
 class DscopeSource : public Pothos::Block {
 protected:
@@ -79,6 +95,8 @@ public:
     {
 
         this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setupDevice));
+        this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setSamplerate));
+        this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setVdiv));
 
         this->setupOutput(0, dtype);
         this->setupOutput(1, dtype);
@@ -88,6 +106,14 @@ public:
     static Pothos::Block *make(const Pothos::DType &dtype) {
         //cout << __func__ << dtype.name() << endl;
         return (Pothos::Block*)new DscopeSource(dtype);
+    }
+
+    void setVdiv(uint64_t vdiv) {
+        _session->get_device()->set_voltage_div(0, vdiv);
+    }
+
+    void setSamplerate(uint64_t samplerate) {
+        _session->get_device()->set_sample_rate(samplerate);
     }
 
     void setupDevice(int logLvl) {
@@ -107,6 +133,10 @@ public:
             _session->set_default_device();
             //_session.start_hotplug_proc(error_handler);
             ds_trigger_init();
+            //_session->stop_capture();
+            _session->get_device()->set_ch_enable(1, false);
+            _session->get_device()->set_limit_samples(2048);
+
         } catch(Pothos::Exception e) {
             std::cout << e.message() << std::endl;
             throw e;
@@ -114,11 +144,7 @@ public:
     }
 
     void activate(void) {
-        _session->get_device()->set_ch_enable(1, false);
-        _session->get_device()->set_limit_samples(2048);
-        _session->get_device()->set_voltage_div(0, 20);
-        _session->get_device()->set_sample_rate(200e6);
-        _session->get_device()->set_time_base(0, 5e3);
+        //_session->get_device()->set_time_base(0, 5e3);
         _session->start_capture(false);
     }
 
@@ -146,13 +172,11 @@ public:
         //std::cout<<"vdiv=" << vdiv << "sample count=" << count << ",eles=" << numElems << std::endl;
         sr_datafeed_dso dso = dso_queue->take();
 
+        //cout << dso.num_samples << endl;
         //cout.setf(ios::hex, ios::basefield);
         for(int i=0;i<numElems;i++) {
             uint8_t b = ((uint8_t *)dso.data)[i];
-
-            //cout << b <<",";
             buffer[i]=(127.5 - b) * 10 * vdiv / 256.0f;
-            //cout << buffer[i] << ",";
         }
         //peform read from the device
         /*
