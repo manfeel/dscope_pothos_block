@@ -81,7 +81,6 @@ POTHOS_MODULE_UTIL(
         sigsession.cpp
         device.cpp
         devinst.cpp
-		blockingqueue.cpp
     LIBRARIES ${PKGDEPS_LIBRARIES} ${Boost_LIBRARIES}
     DESTINATION dscope
     ENABLE_DOCS

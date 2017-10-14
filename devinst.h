@@ -127,6 +127,9 @@ public:
 	virtual void set_ch_enable(int ch_index, bool enable);
 	virtual void set_sample_rate(uint64_t sample_rate);
 	virtual void set_limit_samples(uint64_t sample_count);
+	virtual void set_voltage_div(int ch_index, uint64_t div);
+	virtual uint64_t get_voltage_div(int ch_index);
+	virtual void set_time_base(int ch_index, uint64_t ts);
 protected:
 	SigSession *_owner;
     void *_id;

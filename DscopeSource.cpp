@@ -7,9 +7,10 @@
 #include <Pothos/Framework.hpp>
 #include <Poco/Logger.h>
 #include <chrono>
-
+#include <random>
 #include "devicemanager.h"
 #include "sigsession.h"
+#include "blockingqueue.hpp"
 
 using namespace std;
 //char DS_RES_PATH[256];//="/usr/local/share/DSView/res/";
@@ -71,6 +72,7 @@ protected:
     struct sr_context *sr_ctx = NULL;
     DeviceManager *_device_manager = NULL;
     SigSession *_session = NULL;
+    BlockingQueue<sr_datafeed_dso> *dso_queue = NULL;
 
 public:
     DscopeSource(const Pothos::DType &dtype)
@@ -84,12 +86,12 @@ public:
     }
 
     static Pothos::Block *make(const Pothos::DType &dtype) {
-        cout << __func__ << dtype.name() << endl;
+        //cout << __func__ << dtype.name() << endl;
         return (Pothos::Block*)new DscopeSource(dtype);
     }
 
     void setupDevice(int logLvl) {
-        cout << __func__ << endl;
+        //cout << __func__ << endl;
         sr_log_loglevel_set(logLvl);
 
         // Initialise libsigrok
@@ -98,18 +100,25 @@ public:
         }
 
         try {
+            dso_queue = new BlockingQueue<sr_datafeed_dso>();
             _device_manager = new DeviceManager(sr_ctx);
-            _session = new SigSession(*_device_manager);
+            _session = new SigSession(*_device_manager, *dso_queue);
 
             _session->set_default_device();
             //_session.start_hotplug_proc(error_handler);
             ds_trigger_init();
         } catch(Pothos::Exception e) {
             std::cout << e.message() << std::endl;
+            throw e;
         }
     }
 
     void activate(void) {
+        _session->get_device()->set_ch_enable(1, false);
+        _session->get_device()->set_limit_samples(2048);
+        _session->get_device()->set_voltage_div(0, 20);
+        _session->get_device()->set_sample_rate(200e6);
+        _session->get_device()->set_time_base(0, 5e3);
         _session->start_capture(false);
     }
 
@@ -119,18 +128,32 @@ public:
 
     void work(void) {
         if (this->workInfo().minOutElements == 0) return;
-
+        //if (dso_queue->size() <=0 ) return;
         //calculate the number of frames
-        int numFrames = 1024; //Pa_GetStreamReadAvailable(_stream);
-        if (numFrames <
-            0) { ;//throw Pothos::Exception("DscopeSource::work()", "Pa_GetStreamReadAvailable: " + std::string(Pa_GetErrorText(numFrames)));
-        }
-        if (numFrames == 0) numFrames = MIN_FRAMES_BLOCKING;
+        //int numFrames = _session->get_device()->get_sample_limit(); //Pa_GetStreamReadAvailable(_stream);
+        //if (numFrames <
+        //    0) { ;//throw Pothos::Exception("DscopeSource::work()", "Pa_GetStreamReadAvailable: " + std::string(Pa_GetErrorText(numFrames)));
+        //}
+        //if (numFrames == 0)
+        int  numFrames = _session->get_device()->get_sample_limit();
         numFrames = std::min<int>(numFrames, this->workInfo().minOutElements);
+        auto outPort0 = this->output(0);
+        auto buffer = outPort0->buffer().as<float*>();
+        const size_t numElems = outPort0->elements();
+        uint64_t count = _session->get_device()->get_sample_limit();
+        //std::random_device rd;
+        uint64_t vdiv = _session->get_device()->get_voltage_div(0);
+        //std::cout<<"vdiv=" << vdiv << "sample count=" << count << ",eles=" << numElems << std::endl;
+        sr_datafeed_dso dso = dso_queue->take();
 
-        //get the buffer
-        void *buffer = (void *) this->workInfo().outputPointers.data();
+        //cout.setf(ios::hex, ios::basefield);
+        for(int i=0;i<numElems;i++) {
+            uint8_t b = ((uint8_t *)dso.data)[i];
 
+            //cout << b <<",";
+            buffer[i]=(127.5 - b) * 10 * vdiv / 256.0f;
+            //cout << buffer[i] << ",";
+        }
         //peform read from the device
         /*
             PaError err = Pa_ReadStream(_stream, buffer, numFrames);
@@ -150,16 +173,16 @@ public:
         */
         if (_sendLabel) {
             _sendLabel = false;
-            const auto rate = 1024;//Pa_GetStreamInfo(_stream)->sampleRate;
+            const auto rate = _session->get_device()->get_sample_rate();
             Pothos::Label label("rxRate", rate, 0);
             for (auto port : this->outputs()) port->postLabel(label);
         }
 
         //not ready to produce because of backoff
-        if (_readyTime >= std::chrono::high_resolution_clock::now()) return this->yield();
+        //if (_readyTime >= std::chrono::high_resolution_clock::now()) return this->yield();
 
         //produce buffer (all modes)
-        for (auto port : this->outputs()) port->produce(numFrames);
+        outPort0->produce(numElems);
     }
 };
 

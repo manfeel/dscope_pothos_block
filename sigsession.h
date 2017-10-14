@@ -41,6 +41,7 @@
 
 #include "dso.h"
 #include "dsosnapshot.h"
+#include "blockingqueue.hpp"
 
 struct srd_decoder;
 struct srd_channel;
@@ -89,7 +90,7 @@ public:
     };
 
 public:
-	SigSession(DeviceManager &device_manager);
+	SigSession(DeviceManager &device_manager, BlockingQueue<sr_datafeed_dso> &_dso_queue);
 
 	~SigSession();
 
@@ -147,7 +148,7 @@ private:
 
 private:
 	DeviceManager &_device_manager;
-
+    BlockingQueue<sr_datafeed_dso> &_dso_queue;
 	/**
 	 * The device instance that will be used in the next capture session.
 	 */

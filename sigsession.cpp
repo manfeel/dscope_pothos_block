@@ -50,8 +50,9 @@ using namespace std;
 // TODO: This should not be necessary
 SigSession* SigSession::_session = NULL;
 
-SigSession::SigSession(DeviceManager &device_manager) :
+SigSession::SigSession(DeviceManager &device_manager, BlockingQueue<sr_datafeed_dso> &dso_queue) :
 	_device_manager(device_manager),
+    _dso_queue(dso_queue),
     _capture_state(Init),
     _instant(false),
     _error(No_err),
@@ -441,7 +442,8 @@ void SigSession::data_feed_in_proc(const struct sr_dev_inst *sdi,
 
 
 void SigSession::feed_in_dso(const sr_datafeed_dso &dso) {
-    std::cout << dso.num_samples << std::endl;
+    //std::cout << dso.num_samples << std::endl;
+    _dso_queue.put(dso);
 }
 
 /*

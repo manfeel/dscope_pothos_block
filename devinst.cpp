@@ -294,5 +294,35 @@ void DevInst::set_limit_samples(uint64_t sample_count)
                SR_CONF_LIMIT_SAMPLES,
                g_variant_new_uint64(sample_count));
 }
+
+// unit mv
+void DevInst::set_voltage_div(int ch_index, uint64_t div) {
+    sr_channel* ch=get_channel(ch_index);
+    assert(ch);
+    set_config(ch, NULL, SR_CONF_VDIV,
+                          g_variant_new_uint64(div));
+}
+
+uint64_t DevInst::get_voltage_div(int ch_index) {
+    sr_channel* ch=get_channel(ch_index);
+    assert(ch);
+    uint64_t vdiv;
+    GVariant* gvar = get_config(ch, NULL, SR_CONF_VDIV);
+    if (gvar != NULL) {
+        vdiv = g_variant_get_uint64(gvar);
+        g_variant_unref(gvar);
+    } else {
+        vdiv = 0U;
+    }
+    return vdiv;
+}
+
+// unit ns
+void DevInst::set_time_base(int ch_index, uint64_t ts) {
+    sr_channel* ch=get_channel(ch_index);
+    assert(ch);
+    set_config(ch, NULL, SR_CONF_TIMEBASE,
+               g_variant_new_uint64(ts));
+}
 //} // device
 //} // pv
