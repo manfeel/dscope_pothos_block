@@ -42,7 +42,7 @@ sr_dev_inst *Device::dev_inst() const {
 
 void Device::use(SigSession *owner) {
     DevInst::use(owner);
-    std::cout << "in func (sr_session_new):" << __func__ << std::endl;
+    //std::cout << "in func (sr_session_new):" << __func__ << std::endl;
     sr_session_new();
 
     assert(_sdi);

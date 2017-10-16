@@ -351,7 +351,7 @@ void SigSession::sample_thread_proc(boost::shared_ptr<DevInst> dev_inst)
 {
     assert(dev_inst);
     assert(dev_inst->dev_inst());
-    std::cout << "in func :" << __func__ << std::endl;
+    //std::cout << "in func :" << __func__ << std::endl;
     try {
         dev_inst->start();
     } catch(std::exception) {

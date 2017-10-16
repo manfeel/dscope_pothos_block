@@ -18,11 +18,9 @@ using namespace std;
 /***********************************************************************
  * |PothosDoc DSCope(Virtual Oscilloscope)
  *
- * The audio source forwards an audio input device to an output sample stream.
- * In interleaved mode, the samples are interleaved into one output port,
- * In the port-per-channel mode, each audio channel uses a separate port.
+ * The dscope source capture the waveform to an output sample stream.
  *
- * The audio source will post a sample rate stream label named "rxRate"
+ * The dscope source will post a sample rate stream label named "rxRate"
  * on the first call to work() after activate() has been called.
  * Downstream blocks like the plotter widgets can consume this label
  * and use it to set internal parameters like the axis scaling.
@@ -33,14 +31,14 @@ using namespace std;
  *
  *
  * |param sampRate[Sample Rate] The rate of audio samples.
- * |option 1e6
- * |option 2e6
- * |option 5e6
- * |option 10e6
- * |option 20e6
- * |option 50e6
- * |option 100e6
- * |option 200e6
+ * |option [1M] 1e6
+ * |option [2M] 2e6
+ * |option [5M] 5e6
+ * |option [10M] 10e6
+ * |option [20M] 20e6
+ * |option [50M] 50e6
+ * |option [100M] 100e6
+ * |option [200M] 200e6
  * |default 100e6
  * |units Sps
  * |widget ComboBox(editable=true)
@@ -73,9 +71,10 @@ using namespace std;
  * |preview disable
  *
  * |factory /dsl/dscope(dtype)
- * |initializer setupDevice(logLvl)
+ * |initializer setupDevice(dtype)
  * |setter setSamplerate(sampRate)
  * |setter setVdiv(vdiv)
+ * |setter setLogLevel(logLvl)
  **********************************************************************/
 class DscopeSource : public Pothos::Block {
 protected:
@@ -97,14 +96,18 @@ public:
         this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setupDevice));
         this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setSamplerate));
         this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setVdiv));
+        this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setLogLevel));
 
         this->setupOutput(0, dtype);
         this->setupOutput(1, dtype);
-        //cout << __func__ << endl;
+
+        // Initialise libsigrok for the first time
+        if (sr_init(&sr_ctx) != SR_OK) {
+            throw Pothos::Exception(__func__, "ERROR: libsigrok init failed for the first time!");
+        }
     }
 
     static Pothos::Block *make(const Pothos::DType &dtype) {
-        //cout << __func__ << dtype.name() << endl;
         return (Pothos::Block*)new DscopeSource(dtype);
     }
 
@@ -116,13 +119,20 @@ public:
         _session->get_device()->set_sample_rate(samplerate);
     }
 
-    void setupDevice(int logLvl) {
-        //cout << __func__ << endl;
+    void setLogLevel(int logLvl) {
+        cout<< __func__ << "(" << logLvl << ") has been called." << endl;
         sr_log_loglevel_set(logLvl);
+    }
 
-        // Initialise libsigrok
+    // the param just a dummy for initializer( must have params! why?!)
+    void setupDevice(const Pothos::DType &dtype) {
+        // Initialise libsigrok for the second time!
+        if(dtype.name() != "float32") {
+            throw Pothos::Exception(__func__, "Error: dscope ONLY accept float32 data type!");
+        }
+
         if (sr_init(&sr_ctx) != SR_OK) {
-            throw Pothos::Exception(__func__, "ERROR: libsigrok init failed.");
+            throw Pothos::Exception(__func__, "ERROR: libsigrok init failed for the second time!");
         }
 
         try {
@@ -131,9 +141,7 @@ public:
             _session = new SigSession(*_device_manager, *dso_queue);
 
             _session->set_default_device();
-            //_session.start_hotplug_proc(error_handler);
             ds_trigger_init();
-            //_session->stop_capture();
             _session->get_device()->set_ch_enable(1, false);
             _session->get_device()->set_limit_samples(2048);
 
@@ -144,7 +152,6 @@ public:
     }
 
     void activate(void) {
-        //_session->get_device()->set_time_base(0, 5e3);
         _session->start_capture(false);
     }
 
@@ -154,47 +161,20 @@ public:
 
     void work(void) {
         if (this->workInfo().minOutElements == 0) return;
-        //if (dso_queue->size() <=0 ) return;
-        //calculate the number of frames
-        //int numFrames = _session->get_device()->get_sample_limit(); //Pa_GetStreamReadAvailable(_stream);
-        //if (numFrames <
-        //    0) { ;//throw Pothos::Exception("DscopeSource::work()", "Pa_GetStreamReadAvailable: " + std::string(Pa_GetErrorText(numFrames)));
-        //}
-        //if (numFrames == 0)
+
         int  numFrames = _session->get_device()->get_sample_limit();
         numFrames = std::min<int>(numFrames, this->workInfo().minOutElements);
         auto outPort0 = this->output(0);
         auto buffer = outPort0->buffer().as<float*>();
         const size_t numElems = outPort0->elements();
-        uint64_t count = _session->get_device()->get_sample_limit();
-        //std::random_device rd;
         uint64_t vdiv = _session->get_device()->get_voltage_div(0);
-        //std::cout<<"vdiv=" << vdiv << "sample count=" << count << ",eles=" << numElems << std::endl;
         sr_datafeed_dso dso = dso_queue->take();
 
-        //cout << dso.num_samples << endl;
-        //cout.setf(ios::hex, ios::basefield);
-        for(int i=0;i<numElems;i++) {
+        for(uint64_t i=0;i<numElems;i++) {
             uint8_t b = ((uint8_t *)dso.data)[i];
             buffer[i]=(127.5 - b) * 10 * vdiv / 256.0f;
         }
-        //peform read from the device
-        /*
-            PaError err = Pa_ReadStream(_stream, buffer, numFrames);
 
-            //handle the error reporting
-            bool logError = err != paNoError;
-            if (err == paInputOverflowed)
-            {
-                _readyTime += _backoffTime;
-                if (_reportStderror) std::cerr << "aO" << std::flush;
-                logError = _reportLogger;
-            }
-            if (logError)
-            {
-                poco_error(_logger, "Pa_ReadStream: " + std::string(Pa_GetErrorText(err)));
-            }
-        */
         if (_sendLabel) {
             _sendLabel = false;
             const auto rate = _session->get_device()->get_sample_rate();
