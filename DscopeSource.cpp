@@ -1,5 +1,5 @@
-// Copyright (c) 2014-2016 Josh Blum
-// SPDX-License-Identifier: BSL-1.0
+// Copyright (c) 2017 Manfeel
+// manfeel@foxmail.com
 
 #include <libsigrok4DSL/libsigrok.h>
 #include <algorithm> //min/max
@@ -172,7 +172,8 @@ public:
 
         for(uint64_t i=0;i<numElems;i++) {
             uint8_t b = ((uint8_t *)dso.data)[i];
-            buffer[i]=(127.5 - b) * 10 * vdiv / 256.0f;
+            //buffer[i]=(127.5 - b) * 10 * vdiv / 256.0f;
+            buffer[i]=(127.5 - b) * vdiv / 25.6f;
         }
 
         if (_sendLabel) {
