@@ -1,6 +1,6 @@
 #include <libsigrok4DSL/libsigrok.h>
 #include <stdint.h>
-
+#include <iostream>
 #include "devicemanager.h"
 #include "sigsession.h"
 #include "devinst.h"
@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     int ret = 0;
     struct sr_context *sr_ctx = NULL;
 
-    sr_log_loglevel_set(SR_LOG_ERR);
+    sr_log_loglevel_set(SR_LOG_SPEW);
 
     // Initialise libsigrok
     if (sr_init(&sr_ctx) != SR_OK) {
@@ -20,8 +20,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    BlockingQueue<sr_datafeed_dso> dso_queue;
     DeviceManager _device_manager(sr_ctx);
-    SigSession _session(_device_manager);
+    SigSession _session(_device_manager, dso_queue);
 
     // Initialise the main frame
     //pv::MainFrame w(device_manager, open_file);
@@ -67,6 +68,7 @@ int main(int argc, char *argv[])
     //ds_trigger_init();
     _session.start_capture(false);
 
+    /*
     for(;;) {
         uint64_t  sc = _session.get_snapshot()->get_sample_count();
         const boost::shared_ptr<DsoSnapshot> &snapshot = _session.get_snapshot();
@@ -82,7 +84,7 @@ int main(int argc, char *argv[])
         // v = *data;
         // xdiv = current div of voltage (eg. 10mv)
         //(127.5-v) * 10 * vdiv / (1 << 8)
-    }
+    }*/
     getchar();
     //GMainLoop *main_loop = g_main_loop_new(NULL, FALSE);
     //g_main_loop_run(main_loop);
