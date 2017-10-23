@@ -50,7 +50,7 @@ set(SOURCE_FILES
 		snapshot.cpp
 		dsosnapshot.cpp
 		dso.cpp
-		blockingqueue.cpp)
+		blockingqueue.hpp)
 
 add_executable(${PROJECT_NAME}
         ${SOURCE_FILES}

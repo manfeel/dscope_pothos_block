@@ -27,7 +27,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/thread.hpp>
-
+#include <iostream>
 #include <string>
 #include <utility>
 #include <map>
