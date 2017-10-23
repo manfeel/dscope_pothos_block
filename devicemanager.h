@@ -64,13 +64,13 @@ struct libusbhp_device_t;
         std::list< boost::shared_ptr<DevInst> > driver_scan(
                 struct sr_dev_driver *const driver,
                 GSList *const drvopts = NULL);
-
+        void scan_all_drivers();
     private:
         void init_drivers();
 
         void release_devices();
 
-        void scan_all_drivers();
+
 
         void release_driver(struct sr_dev_driver *const driver);
 

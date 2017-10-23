@@ -21,11 +21,6 @@
  */
 #include "sigsession.h"
 #include "devicemanager.h"
-#include "device.h"
-
-#include <assert.h>
-#include <stdexcept>
-#include <sys/stat.h>
 
 #include <boost/foreach.hpp>
 
@@ -48,22 +43,21 @@ using namespace std;
 //namespace pv {
 
 // TODO: This should not be necessary
-SigSession* SigSession::_session = NULL;
+SigSession *SigSession::_session = NULL;
 
 SigSession::SigSession(DeviceManager &device_manager, BlockingQueue<sr_datafeed_dso> &dso_queue) :
-	_device_manager(device_manager),
-    _dso_queue(dso_queue),
-    _capture_state(Init),
-    _instant(false),
-    _error(No_err),
-    _run_mode(Single),
-    _repeat_intvl(1),
-    _repeating(false),
-    _repeat_hold_prg(0),
-    _map_zoom(0)
-{
-	// TODO: This should not be necessary
-	_session = this;
+        _device_manager(device_manager),
+        _dso_queue(dso_queue),
+        _capture_state(Init),
+        _instant(false),
+        _error(No_err),
+        _run_mode(Single),
+        _repeat_intvl(1),
+        _repeating(false),
+        _repeat_hold_prg(0),
+        _map_zoom(0) {
+    // TODO: This should not be necessary
+    _session = this;
     _hot_attach = false;
     _hot_detach = false;
     _group_cnt = 0;
@@ -76,25 +70,22 @@ SigSession::SigSession(DeviceManager &device_manager, BlockingQueue<sr_datafeed_
     //_dso_data->push_snapshot(_cur_dso_snapshot);
 }
 
-SigSession::~SigSession()
-{
-	stop_capture();
-		       
+SigSession::~SigSession() {
+    stop_capture();
+
     ds_trigger_destroy();
 
     _dev_inst->release();
 
-	// TODO: This should not be necessary
-	_session = NULL;
+    // TODO: This should not be necessary
+    _session = NULL;
 }
 
-boost::shared_ptr<DevInst> SigSession::get_device() const
-{
+boost::shared_ptr<DevInst> SigSession::get_device() const {
     return _dev_inst;
 }
 
-void SigSession::set_device(boost::shared_ptr<DevInst> dev_inst)
-{
+void SigSession::set_device(boost::shared_ptr<DevInst> dev_inst) {
     //using pv::device::Device;
 
     // Ensure we are not capturing before setting the device
@@ -117,7 +108,7 @@ void SigSession::set_device(boost::shared_ptr<DevInst> dev_inst)
                 set_run_mode(Repetitive);
             else
                 set_run_mode(Single);
-        } catch(std::exception) {
+        } catch (std::exception) {
             std::cout << "set_device failed!" << std::endl;
             return;
         }
@@ -126,35 +117,32 @@ void SigSession::set_device(boost::shared_ptr<DevInst> dev_inst)
 }
 
 
-void SigSession::set_default_device()
-{
+void SigSession::set_default_device() {
     boost::shared_ptr<DevInst> default_device;
     const list<boost::shared_ptr<DevInst> > &devices =
-        _device_manager.devices();
+            _device_manager.devices();
 
     if (!devices.empty()) {
         // Fall back to the first device in the list.
         default_device = devices.front();
 
         // Try and find the DreamSourceLab device and select that by default
-        BOOST_FOREACH (boost::shared_ptr<DevInst> dev, devices)
-            if (dev->dev_inst() &&
-                    (dev->name().find("virtual") == std::string::npos)) {
-                default_device = dev;
-                break;
-            }
+        BOOST_FOREACH (boost::shared_ptr<DevInst> dev, devices)if (dev->dev_inst() &&
+                                                                   (dev->name().find("virtual") == std::string::npos)) {
+                            default_device = dev;
+                            break;
+                        }
         try {
             set_device(default_device);
-        } catch(std::exception e) {
+        } catch (std::exception e) {
             std::cout << "set device error!" << std::endl;
             return;
         }
     }
 }
 
-void SigSession::release_device(DevInst *dev_inst)
-{
-    (void)dev_inst;
+void SigSession::release_device(DevInst *dev_inst) {
+    (void) dev_inst;
     assert(_dev_inst.get() == dev_inst);
 
     assert(get_capture_state() != Running);
@@ -162,32 +150,27 @@ void SigSession::release_device(DevInst *dev_inst)
     //_dev_inst.reset();
 }
 
-SigSession::capture_state SigSession::get_capture_state() const
-{
+SigSession::capture_state SigSession::get_capture_state() const {
     boost::lock_guard<boost::mutex> lock(_sampling_mutex);
-	return _capture_state;
+    return _capture_state;
 }
 
-uint64_t SigSession::cur_samplelimits() const
-{
+uint64_t SigSession::cur_samplelimits() const {
     return _cur_samplelimits;
 }
 
-uint64_t SigSession::cur_samplerate() const
-{
+uint64_t SigSession::cur_samplerate() const {
     return _cur_samplerate;
 }
 
-double SigSession::cur_sampletime() const
-{
+double SigSession::cur_sampletime() const {
     if (_cur_samplerate == 0)
         return 0;
     else
-        return  cur_samplelimits() * 1.0 / cur_samplerate();
+        return cur_samplelimits() * 1.0 / cur_samplerate();
 }
 
-void SigSession::set_cur_samplerate(uint64_t samplerate)
-{
+void SigSession::set_cur_samplerate(uint64_t samplerate) {
     assert(samplerate != 0);
     _cur_samplerate = samplerate;
     // TODO: populate samplerate to real device
@@ -195,16 +178,14 @@ void SigSession::set_cur_samplerate(uint64_t samplerate)
     //    _dso_data->set_samplerate(_cur_samplerate);
 }
 
-void SigSession::set_cur_samplelimits(uint64_t samplelimits)
-{
+void SigSession::set_cur_samplelimits(uint64_t samplelimits) {
     assert(samplelimits != 0);
     _cur_samplelimits = samplelimits;
     // TODO: populate samplelimits to real device
 }
 
 
-void SigSession::init_signals()
-{
+void SigSession::init_signals() {
     assert(_dev_inst);
     stop_capture();
 
@@ -216,15 +197,15 @@ void SigSession::init_signals()
     //    _dso_data->clear();
 
     // Detect what data types we will receive
-    if(_dev_inst) {
+    if (_dev_inst) {
         assert(_dev_inst->dev_inst());
         for (const GSList *l = _dev_inst->dev_inst()->channels;
              l; l = l->next) {
-            const sr_channel *const probe = (const sr_channel *)l->data;
+            const sr_channel *const probe = (const sr_channel *) l->data;
 
-            switch(probe->type) {
+            switch (probe->type) {
                 case SR_CHANNEL_LOGIC:
-                    if(probe->enabled)
+                    if (probe->enabled)
                         logic_probe_count++;
                     break;
 
@@ -233,7 +214,7 @@ void SigSession::init_signals()
                     break;
 
                 case SR_CHANNEL_ANALOG:
-                    if(probe->enabled)
+                    if (probe->enabled)
                         analog_probe_count++;
                     break;
             }
@@ -241,8 +222,7 @@ void SigSession::init_signals()
     }
 }
 
-void SigSession::capture_init()
-{
+void SigSession::capture_init() {
     _cur_samplerate = _dev_inst->get_sample_rate();
     _cur_samplelimits = _dev_inst->get_sample_limit();
     _data_updated = false;
@@ -257,8 +237,7 @@ void SigSession::capture_init()
 }
 
 
-void SigSession::start_capture(bool instant)
-{
+void SigSession::start_capture(bool instant) {
     // Check that a device instance has been selected.
     if (!_dev_inst) {
         std::cout << "No device selected";
@@ -272,7 +251,7 @@ void SigSession::start_capture(bool instant)
     }
 
     // stop previous capture
-	stop_capture();
+    stop_capture();
 
     // update setting
     if (_dev_inst->name() != "virtual-session")
@@ -281,80 +260,75 @@ void SigSession::start_capture(bool instant)
         _instant = true;
     capture_init();
 
-	// Check that at least one probe is enabled
-	const GSList *l;
+    // Check that at least one probe is enabled
+    const GSList *l;
     for (l = _dev_inst->dev_inst()->channels; l; l = l->next) {
-        sr_channel *const probe = (sr_channel*)l->data;
-		assert(probe);
-		if (probe->enabled)
-			break;
-	}
-	if (!l) {
-		std::cout << "No probes enabled." << std::endl;
-		return;
-	}
+        sr_channel *const probe = (sr_channel *) l->data;
+        assert(probe);
+        if (probe->enabled)
+            break;
+    }
+    if (!l) {
+        std::cout << "No probes enabled." << std::endl;
+        return;
+    }
 
-	// Begin the session
-	_sampling_thread.reset(new boost::thread(
-        &SigSession::sample_thread_proc, this, _dev_inst));
+    // Begin the session
+    _sampling_thread.reset(new boost::thread(
+            &SigSession::sample_thread_proc, this, _dev_inst));
 }
 
-void SigSession::stop_capture()
-{
+void SigSession::stop_capture() {
     _instant = false;
 
     if (get_capture_state() != Running)
-		return;
-	sr_session_stop();
+        return;
+    sr_session_stop();
 
-	// Check that sampling stopped
+    // Check that sampling stopped
     if (_sampling_thread.get())
         _sampling_thread->join();
     _sampling_thread.reset();
 }
 
-bool SigSession::get_capture_status(bool &triggered, int &progress)
-{
+bool SigSession::get_capture_status(bool &triggered, int &progress) {
     uint64_t sample_limits = cur_samplelimits();
     sr_status status;
-    if (sr_status_get(_dev_inst->dev_inst(), &status, true, SR_STATUS_TRIG_BEGIN, SR_STATUS_TRIG_END) == SR_OK){
+    if (sr_status_get(_dev_inst->dev_inst(), &status, true, SR_STATUS_TRIG_BEGIN, SR_STATUS_TRIG_END) == SR_OK) {
         triggered = status.trig_hit & 0x01;
         uint64_t captured_cnt = status.trig_hit >> 2;
-        captured_cnt = ((uint64_t)status.captured_cnt0 +
-                       ((uint64_t)status.captured_cnt1 << 8) +
-                       ((uint64_t)status.captured_cnt2 << 16) +
-                       ((uint64_t)status.captured_cnt3 << 24) +
-                       (captured_cnt << 32));
+        captured_cnt = ((uint64_t) status.captured_cnt0 +
+                        ((uint64_t) status.captured_cnt1 << 8) +
+                        ((uint64_t) status.captured_cnt2 << 16) +
+                        ((uint64_t) status.captured_cnt3 << 24) +
+                        (captured_cnt << 32));
         if (_dev_inst->dev_inst()->mode == DSO)
             //captured_cnt = captured_cnt * _signals.size() / get_ch_num(SR_CHANNEL_DSO);
-        if (triggered)
-            progress = (sample_limits - captured_cnt) * 100.0 / sample_limits;
-        else
-            progress = captured_cnt * 100.0 / sample_limits;
+            if (triggered)
+                progress = (sample_limits - captured_cnt) * 100.0 / sample_limits;
+            else
+                progress = captured_cnt * 100.0 / sample_limits;
         return true;
     }
     return false;
 }
 
-bool SigSession::get_instant()
-{
+bool SigSession::get_instant() {
     return _instant;
 }
 
-void SigSession::set_capture_state(capture_state state)
-{
+void SigSession::set_capture_state(capture_state state) {
     boost::lock_guard<boost::mutex> lock(_sampling_mutex);
-	_capture_state = state;
+    _capture_state = state;
 }
 
-void SigSession::sample_thread_proc(boost::shared_ptr<DevInst> dev_inst)
-{
+void SigSession::sample_thread_proc(boost::shared_ptr<DevInst> dev_inst) {
     assert(dev_inst);
     assert(dev_inst->dev_inst());
     //std::cout << "in func :" << __func__ << std::endl;
     try {
         dev_inst->start();
-    } catch(std::exception) {
+    } catch (std::exception) {
         //error_handler(e);
         std::cout << "dev_inst start failed!" << std::endl;
         return;
@@ -368,10 +342,9 @@ void SigSession::sample_thread_proc(boost::shared_ptr<DevInst> dev_inst)
 }
 
 void SigSession::data_feed_in(const struct sr_dev_inst *sdi,
-    const struct sr_datafeed_packet *packet)
-{
-	assert(sdi);
-	assert(packet);
+                              const struct sr_datafeed_packet *packet) {
+    assert(sdi);
+    assert(packet);
 
     if (_data_lock)
         return;
@@ -381,63 +354,60 @@ void SigSession::data_feed_in(const struct sr_dev_inst *sdi,
         return;
     }
 
-	switch (packet->type) {
-	case SR_DF_HEADER:
-		//feed_in_header(sdi);
-		break;
+    switch (packet->type) {
+        case SR_DF_HEADER:
+            //feed_in_header(sdi);
+            break;
 
-	case SR_DF_META:
-		assert(packet->payload);
-		//feed_in_meta(sdi, *(const sr_datafeed_meta*)packet->payload);
-		break;
+        case SR_DF_META:
+            assert(packet->payload);
+            //feed_in_meta(sdi, *(const sr_datafeed_meta*)packet->payload);
+            break;
 
-    case SR_DF_TRIGGER:
-        assert(packet->payload);
-        //feed_in_trigger(*(const ds_trigger_pos*)packet->payload);
-        break;
+        case SR_DF_TRIGGER:
+            assert(packet->payload);
+            //feed_in_trigger(*(const ds_trigger_pos*)packet->payload);
+            break;
 
-	case SR_DF_LOGIC:
-		assert(packet->payload);
-        //feed_in_logic(*(const sr_datafeed_logic*)packet->payload);
-		break;
+        case SR_DF_LOGIC:
+            assert(packet->payload);
+            //feed_in_logic(*(const sr_datafeed_logic*)packet->payload);
+            break;
 
-    case SR_DF_DSO:
-        assert(packet->payload);
-        feed_in_dso(*(const sr_datafeed_dso*)packet->payload);
-        break;
+        case SR_DF_DSO:
+            assert(packet->payload);
+            feed_in_dso(*(const sr_datafeed_dso *) packet->payload);
+            break;
 
-	case SR_DF_ANALOG:
-		assert(packet->payload);
-        //feed_in_analog(*(const sr_datafeed_analog*)packet->payload);
-		break;
+        case SR_DF_ANALOG:
+            assert(packet->payload);
+            //feed_in_analog(*(const sr_datafeed_analog*)packet->payload);
+            break;
 
-    case SR_DF_OVERFLOW:
-    {
-        if (_error == No_err) {
-            _error = Data_overflow;
+        case SR_DF_OVERFLOW: {
+            if (_error == No_err) {
+                _error = Data_overflow;
 //            session_error();
+            }
+            break;
         }
-        break;
-    }
-	case SR_DF_END:
-	{
-        //_cur_dso_snapshot->capture_ended();
-        if (packet->status != SR_PKT_OK) {
-            _error = Pkt_data_err;
+        case SR_DF_END: {
+            //_cur_dso_snapshot->capture_ended();
+            if (packet->status != SR_PKT_OK) {
+                _error = Pkt_data_err;
 //            session_error();
-        }
+            }
 //        frame_ended();
-		break;
-	}
-	}
+            break;
+        }
+    }
 }
 
 void SigSession::data_feed_in_proc(const struct sr_dev_inst *sdi,
-    const struct sr_datafeed_packet *packet, void *cb_data)
-{
-	(void) cb_data;
-	assert(_session);
-	_session->data_feed_in(sdi, packet);
+                                   const struct sr_datafeed_packet *packet, void *cb_data) {
+    (void) cb_data;
+    assert(_session);
+    _session->data_feed_in(sdi, packet);
 }
 
 
@@ -485,54 +455,138 @@ void SigSession::feed_in_dso(const sr_datafeed_dso &dso)
 //    return _cur_dso_snapshot;
 //}
 
-uint16_t SigSession::get_ch_num(int type)
-{
+uint16_t SigSession::get_ch_num(int type) {
     return 2;
 }
 
-SigSession::error_state SigSession::get_error() const
-{
+SigSession::error_state SigSession::get_error() const {
     return _error;
 }
 
-void SigSession::set_error(error_state state)
-{
+void SigSession::set_error(error_state state) {
     _error = state;
 }
 
-void SigSession::clear_error()
-{
+void SigSession::clear_error() {
     _error_pattern = 0;
     _error = No_err;
 }
 
-uint64_t SigSession::get_error_pattern() const
-{
+uint64_t SigSession::get_error_pattern() const {
     return _error_pattern;
 }
 
-SigSession::run_mode SigSession::get_run_mode() const
-{
+SigSession::run_mode SigSession::get_run_mode() const {
     return _run_mode;
 }
 
-void SigSession::set_run_mode(run_mode mode)
-{
+void SigSession::set_run_mode(run_mode mode) {
     _run_mode = mode;
 }
 
-int SigSession::get_repeat_intvl() const
-{
+int SigSession::get_repeat_intvl() const {
     return _repeat_intvl;
 }
 
-void SigSession::set_repeat_intvl(int interval)
-{
+void SigSession::set_repeat_intvl(int interval) {
     _repeat_intvl = interval;
 }
 
-bool SigSession::isRepeating() const
-{
+bool SigSession::isRepeating() const {
     return _repeating;
 }
-//} // namespace pv
+
+/*
+ * hotplug function
+ */
+int SigSession::hotplug_callback(struct libusb_context *ctx, struct libusb_device *dev,
+                                 libusb_hotplug_event event, void *user_data) {
+
+    (void) ctx;
+    (void) dev;
+    (void) user_data;
+
+    if (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED == event) {
+        _session->_hot_attach = true;
+        printf("DreamSourceLab Hardware Attached!\n");
+    } else if (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT == event) {
+        _session->_hot_detach = true;
+        printf("DreamSourceLab Hardware Detached!\n");
+    } else {
+        printf("Unhandled event %d\n", event);
+    }
+
+    return 0;
+}
+
+void SigSession::hotplug_proc() {
+    struct timeval tv;
+
+    if (!_dev_inst)
+        return;
+
+    tv.tv_sec = tv.tv_usec = 0;
+    try {
+        while (_session) {
+            libusb_handle_events_timeout(NULL, &tv);
+            if (_hot_attach) {
+                printf("DreamSourceLab hardware attached!");
+                //device_attach();
+                _device_manager.scan_all_drivers();
+                set_default_device();
+                get_device()->set_ch_enable(1, false);
+                get_device()->set_limit_samples(2048);
+                //stop_hotplug_proc();
+                //deregister_hotplug_callback();
+                _hot_attach = false;
+            }
+            if (_hot_detach) {
+                printf("DreamSourceLab hardware detached!");
+                //device_detach();
+                _device_manager.scan_all_drivers();
+                set_default_device();
+                _hot_detach = false;
+            }
+            boost::this_thread::sleep(boost::posix_time::millisec(100));
+        }
+    } catch (...) {
+        printf("Interrupt exception for hotplug thread was thrown.");
+    }
+    printf("Hotplug thread exit!");
+}
+
+void SigSession::register_hotplug_callback() {
+    int ret;
+
+    ret = libusb_hotplug_register_callback(NULL, (libusb_hotplug_event) (LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED |
+                                                                         LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT),
+                                           (libusb_hotplug_flag) LIBUSB_HOTPLUG_ENUMERATE, 0x2A0E,
+                                           LIBUSB_HOTPLUG_MATCH_ANY,
+                                           LIBUSB_HOTPLUG_MATCH_ANY, hotplug_callback, NULL,
+                                           &_hotplug_handle);
+    if (LIBUSB_SUCCESS != ret) {
+        printf("Error creating a hotplug callback\n");
+    }
+}
+
+void SigSession::deregister_hotplug_callback() {
+    libusb_hotplug_deregister_callback(NULL, _hotplug_handle);
+}
+
+void SigSession::start_hotplug_proc() {
+
+// Begin the session
+    printf("Starting a hotplug thread...\n");
+    _hot_attach = false;
+    _hot_detach = false;
+    _hotplug.reset(new boost::thread(&SigSession::hotplug_proc, this));
+
+}
+
+void SigSession::stop_hotplug_proc() {
+    if (_hotplug.get()) {
+        _hotplug->interrupt();
+        _hotplug->join();
+    }
+    _hotplug.reset();
+}

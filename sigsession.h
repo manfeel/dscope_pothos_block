@@ -134,6 +134,14 @@ public:
     void set_repeat_intvl(int interval);
     bool isRepeating() const;
 	//boost::shared_ptr<DsoSnapshot> get_snapshot();
+    void start_hotplug_proc();
+    void stop_hotplug_proc();
+    void register_hotplug_callback();
+    void deregister_hotplug_callback();
+    // thread for hotplug
+    void hotplug_proc();
+    static int hotplug_callback(struct libusb_context *ctx, struct libusb_device *dev,
+                                libusb_hotplug_event event, void *user_data);
 private:
 	void set_capture_state(capture_state state);
 

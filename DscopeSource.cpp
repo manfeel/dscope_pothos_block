@@ -99,7 +99,7 @@ public:
         this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setLogLevel));
 
         this->setupOutput(0, dtype);
-        this->setupOutput(1, dtype);
+        //this->setupOutput(1, dtype);
 
         // Initialise libsigrok for the first time
         if (sr_init(&sr_ctx) != SR_OK) {
@@ -142,8 +142,12 @@ public:
 
             _session->set_default_device();
             ds_trigger_init();
-            _session->get_device()->set_ch_enable(1, false);
-            _session->get_device()->set_limit_samples(2048);
+
+            _session->register_hotplug_callback();
+            _session->start_hotplug_proc();
+
+            //_session->get_device()->set_ch_enable(1, false);
+            //_session->get_device()->set_limit_samples(2048);
 
         } catch(Pothos::Exception e) {
             std::cout << e.message() << std::endl;
