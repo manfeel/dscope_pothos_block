@@ -63,7 +63,7 @@ using namespace std;
  * |option [SR_LOG_INFO] 3
  * |option [SR_LOG_DBG]  4
  * |option [SR_LOG_SPEW] 5
- * |default 1
+ * |default 2
  *
  * |param dtype[Data Type] The data type produced by the audio source.
  * |option [Float32] "float32"
@@ -71,19 +71,13 @@ using namespace std;
  * |preview disable
  *
  * |factory /dsl/dscope(dtype)
- * |initializer setupDevice(dtype)
  * |setter setSamplerate(sampRate)
  * |setter setVdiv(vdiv)
  * |setter setLogLevel(logLvl)
  **********************************************************************/
 class DscopeSource : public Pothos::Block {
 protected:
-    //bool _interleaved;
-    bool _sendLabel;
-    bool _reportLogger;
-    bool _reportStderror;
-    std::chrono::high_resolution_clock::duration _backoffTime;
-    std::chrono::high_resolution_clock::time_point _readyTime;
+    bool _sendLabel = true;
     struct sr_context *sr_ctx = NULL;
     DeviceManager *_device_manager = NULL;
     SigSession *_session = NULL;
@@ -93,7 +87,7 @@ public:
     DscopeSource(const Pothos::DType &dtype)
     {
 
-        this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setupDevice));
+        //this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setupDevice));
         this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setSamplerate));
         this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setVdiv));
         this->registerCall(this, POTHOS_FCN_TUPLE(DscopeSource, setLogLevel));
@@ -101,10 +95,42 @@ public:
         this->setupOutput(0, dtype);
         //this->setupOutput(1, dtype);
 
-        // Initialise libsigrok for the first time
+        // Initialise libsigrok
         if (sr_init(&sr_ctx) != SR_OK) {
             throw Pothos::Exception(__func__, "ERROR: libsigrok init failed for the first time!");
         }
+        // * |initializer setupDevice(dtype)
+        dso_queue = new BlockingQueue<sr_datafeed_dso>();
+        _device_manager = new DeviceManager(sr_ctx);
+        _session = new SigSession(*_device_manager, *dso_queue);
+
+        _session->set_default_device();
+        if( _session->get_device()->name() != "DSCope") {
+            cout << "ERROR: device DSCope not found!" << endl;
+            destruct();
+            throw Pothos::Exception(__func__, "ERROR: device DSCope not found!");
+        }
+
+        ds_trigger_init();
+
+        //_session->register_hotplug_callback();
+        //_session->start_hotplug_proc();
+
+        _session->get_device()->set_ch_enable(1, false);
+        _session->get_device()->set_limit_samples(2048);
+    }
+
+    ~DscopeSource() {
+        destruct();
+    }
+
+    void destruct() {
+        if(dso_queue != NULL)
+            delete dso_queue;
+        if(_device_manager != NULL)
+            delete _device_manager;
+        if(_session != NULL)
+            delete _session;
     }
 
     static Pothos::Block *make(const Pothos::DType &dtype) {
@@ -122,37 +148,6 @@ public:
     void setLogLevel(int logLvl) {
         cout<< __func__ << "(" << logLvl << ") has been called." << endl;
         sr_log_loglevel_set(logLvl);
-    }
-
-    // the param just a dummy for initializer( must have params! why?!)
-    void setupDevice(const Pothos::DType &dtype) {
-        // Initialise libsigrok for the second time!
-        if(dtype.name() != "float32") {
-            throw Pothos::Exception(__func__, "Error: dscope ONLY accept float32 data type!");
-        }
-
-        if (sr_init(&sr_ctx) != SR_OK) {
-            throw Pothos::Exception(__func__, "ERROR: libsigrok init failed for the second time!");
-        }
-
-        try {
-            dso_queue = new BlockingQueue<sr_datafeed_dso>();
-            _device_manager = new DeviceManager(sr_ctx);
-            _session = new SigSession(*_device_manager, *dso_queue);
-
-            _session->set_default_device();
-            ds_trigger_init();
-
-            _session->register_hotplug_callback();
-            _session->start_hotplug_proc();
-
-            //_session->get_device()->set_ch_enable(1, false);
-            //_session->get_device()->set_limit_samples(2048);
-
-        } catch(Pothos::Exception e) {
-            std::cout << e.message() << std::endl;
-            throw e;
-        }
     }
 
     void activate(void) {
