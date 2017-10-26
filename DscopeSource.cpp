@@ -82,7 +82,7 @@ protected:
     DeviceManager *_device_manager = NULL;
     SigSession *_session = NULL;
     BlockingQueue<sr_datafeed_dso> *dso_queue = NULL;
-
+    const string lvlStr[6] = {"NONE","ERROR","WARN","INFO","DEBUG","SPEW"};
 public:
     DscopeSource(const Pothos::DType &dtype)
     {
@@ -125,12 +125,18 @@ public:
     }
 
     void destruct() {
-        if(_session != NULL)
+        if(_session != NULL) {
+            cout << "destructing session." << endl;
             delete _session;
-        if(_device_manager != NULL)
+        }
+        if(_device_manager != NULL) {
+            cout << "destructing device manager." << endl;
             delete _device_manager;
-        if(dso_queue != NULL)
+        }
+        if(dso_queue != NULL) {
+            cout << "destructing dso_queue." << endl;
             delete dso_queue;
+        }
     }
 
     static Pothos::Block *make(const Pothos::DType &dtype) {
@@ -146,7 +152,7 @@ public:
     }
 
     void setLogLevel(int logLvl) {
-        cout<< __func__ << "(" << logLvl << ") has been called." << endl;
+        cout<< __func__ << "(" << lvlStr[logLvl] << ")" << endl;
         sr_log_loglevel_set(logLvl);
     }
 
