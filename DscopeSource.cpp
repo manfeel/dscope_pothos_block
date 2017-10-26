@@ -82,7 +82,7 @@ protected:
     DeviceManager *_device_manager = NULL;
     SigSession *_session = NULL;
     BlockingQueue<sr_datafeed_dso> *dso_queue = NULL;
-    const string lvlStr[6] = {"NONE","ERROR","WARN","INFO","DEBUG","SPEW"};
+    const char* lvlStr[6] = {"NONE","ERROR","WARN","INFO","DEBUG","SPEW"};
 public:
     DscopeSource(const Pothos::DType &dtype)
     {
@@ -105,6 +105,7 @@ public:
         _session = new SigSession(*_device_manager, *dso_queue);
 
         _session->set_default_device();
+
         if( _session->get_device()->name() != "DSCope") {
             cout << "ERROR: device DSCope not found!" << endl;
             destruct();
@@ -124,18 +125,21 @@ public:
         destruct();
     }
 
+    // IMPORTANT! the session must destruct last! or the eavluator thread will lock-up!
     void destruct() {
-        if(_session != NULL) {
-            cout << "destructing session." << endl;
-            delete _session;
+        if(dso_queue != NULL) {
+            cout << "destructing dso_queue." << endl;
+            delete dso_queue;
         }
+
         if(_device_manager != NULL) {
             cout << "destructing device manager." << endl;
             delete _device_manager;
         }
-        if(dso_queue != NULL) {
-            cout << "destructing dso_queue." << endl;
-            delete dso_queue;
+
+        if(_session != NULL) {
+            cout << "destructing session." << endl;
+            delete _session;
         }
     }
 
