@@ -125,12 +125,12 @@ public:
     }
 
     void destruct() {
-        if(dso_queue != NULL)
-            delete dso_queue;
-        if(_device_manager != NULL)
-            delete _device_manager;
         if(_session != NULL)
             delete _session;
+        if(_device_manager != NULL)
+            delete _device_manager;
+        if(dso_queue != NULL)
+            delete dso_queue;
     }
 
     static Pothos::Block *make(const Pothos::DType &dtype) {
