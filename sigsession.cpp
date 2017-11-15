@@ -71,6 +71,7 @@ SigSession::SigSession(DeviceManager &device_manager, BlockingQueue<sr_datafeed_
 }
 
 SigSession::~SigSession() {
+    std::cout << __func__ << " has been called!" << std::endl;
     stop_capture();
 
     ds_trigger_destroy();
@@ -78,6 +79,7 @@ SigSession::~SigSession() {
     _dev_inst->release();
 
     // TODO: This should not be necessary
+    std::cout << __func__ << " end!" << std::endl;
     _session = NULL;
 }
 
@@ -147,7 +149,7 @@ void SigSession::release_device(DevInst *dev_inst) {
 
     assert(get_capture_state() != Running);
     _dev_inst = boost::shared_ptr<DevInst>();
-    //_dev_inst.reset();
+    _dev_inst.reset();
 }
 
 SigSession::capture_state SigSession::get_capture_state() const {

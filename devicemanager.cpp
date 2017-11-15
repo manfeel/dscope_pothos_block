@@ -54,6 +54,7 @@ using std::string;
 
     DeviceManager::~DeviceManager()
     {
+        std::cout << __func__ << " has been called!" << std::endl;
         release_devices();
     }
 
