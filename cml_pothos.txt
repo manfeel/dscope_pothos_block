@@ -7,7 +7,7 @@ project(DSCope CXX)
 include(FindPkgConfig)
 
 if(${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME})
-    find_package(Pothos "0.5.1" CONFIG REQUIRED)
+    find_package(Pothos "0.6.1" CONFIG REQUIRED)
 else()
     find_package(Pothos CONFIG REQUIRED) #in-tree build
 endif()

@@ -13,9 +13,6 @@
   <component name="ChangeListManager">
     <list default="true" id="70b7c852-d96e-44f8-bb43-de1763528212" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/CMakeLists.txt" afterPath="$PROJECT_DIR$/CMakeLists.txt" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/devicemanager.cpp" afterPath="$PROJECT_DIR$/devicemanager.cpp" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/sigsession.cpp" afterPath="$PROJECT_DIR$/sigsession.cpp" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -290,7 +287,7 @@
       <workItem from="1509025933569" duration="1540000" />
       <workItem from="1509070110449" duration="3406000" />
       <workItem from="1509191152574" duration="736000" />
-      <workItem from="1510732990920" duration="14000" />
+      <workItem from="1510732990920" duration="593000" />
     </task>
     <task id="LOCAL-00001" summary="minor mod">
       <created>1508394926479</created>
@@ -320,11 +317,18 @@
       <option name="project" value="LOCAL" />
       <updated>1509028125600</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="meet a very weird bug: the destruction order is weird!">
+      <created>1510733559056</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1510733559056</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="99355000" />
+    <option name="totallyTimeSpent" value="99934000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">

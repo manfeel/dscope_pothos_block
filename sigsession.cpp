@@ -348,13 +348,15 @@ void SigSession::data_feed_in(const struct sr_dev_inst *sdi,
     assert(sdi);
     assert(packet);
 
+    //boost::lock_guard<boost::mutex> lock(_data_mutex);
+
     if (_data_lock)
         return;
-    if (packet->type != SR_DF_END &&
-        packet->status != SR_PKT_OK) {
-        _error = Pkt_data_err;
-        return;
-    }
+    //if (packet->type != SR_DF_END &&
+    //    packet->status != SR_PKT_OK) {
+    //    _error = Pkt_data_err;
+    //    return;
+   // }
 
     switch (packet->type) {
         case SR_DF_HEADER:
@@ -386,13 +388,14 @@ void SigSession::data_feed_in(const struct sr_dev_inst *sdi,
             //feed_in_analog(*(const sr_datafeed_analog*)packet->payload);
             break;
 
-        case SR_DF_OVERFLOW: {
-            if (_error == No_err) {
-                _error = Data_overflow;
+        //case SR_DF_OVERFLOW: {
+        //    if (_error == No_err) {
+        //        _error = Data_overflow;
 //            session_error();
-            }
-            break;
-        }
+        //    }
+        //    break;
+        //}
+        /*
         case SR_DF_END: {
             //_cur_dso_snapshot->capture_ended();
             if (packet->status != SR_PKT_OK) {
@@ -401,7 +404,7 @@ void SigSession::data_feed_in(const struct sr_dev_inst *sdi,
             }
 //        frame_ended();
             break;
-        }
+        } */
     }
 }
 

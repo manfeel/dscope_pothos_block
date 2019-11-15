@@ -210,7 +210,7 @@ double DevInst::get_sample_time()
     return sample_time;
 }
 
-GSList* DevInst::get_dev_mode_list()
+const GSList* DevInst::get_dev_mode_list()
 {
     assert(_owner);
     sr_dev_inst *const sdi = dev_inst();
@@ -266,7 +266,7 @@ void DevInst::set_ch_enable(int ch_index, bool enable) {
 
     sr_channel* ch=get_channel(ch_index);
     assert(ch);
-
+/*
     gvar = get_config(ch, NULL, SR_CONF_EN_CH);
     if (gvar != NULL) {
         cur_enable = g_variant_get_boolean(gvar);
@@ -279,6 +279,8 @@ void DevInst::set_ch_enable(int ch_index, bool enable) {
         return;
 
     set_config(ch, NULL, SR_CONF_EN_CH, g_variant_new_boolean(enable));
+*/
+	enable_probe(ch, enable);
 }
 
 void DevInst::set_sample_rate(uint64_t sample_rate)
@@ -299,7 +301,7 @@ void DevInst::set_limit_samples(uint64_t sample_count)
 void DevInst::set_voltage_div(int ch_index, uint64_t div) {
     sr_channel* ch=get_channel(ch_index);
     assert(ch);
-    set_config(ch, NULL, SR_CONF_VDIV,
+    set_config(ch, NULL, SR_CONF_PROBE_VDIV,
                           g_variant_new_uint64(div));
 }
 
@@ -307,7 +309,7 @@ uint64_t DevInst::get_voltage_div(int ch_index) {
     sr_channel* ch=get_channel(ch_index);
     assert(ch);
     uint64_t vdiv;
-    GVariant* gvar = get_config(ch, NULL, SR_CONF_VDIV);
+    GVariant* gvar = get_config(ch, NULL, SR_CONF_PROBE_VDIV);
     if (gvar != NULL) {
         vdiv = g_variant_get_uint64(gvar);
         g_variant_unref(gvar);
